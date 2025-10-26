@@ -7,5 +7,5 @@ migrations/*
 !migrations/.gitkeep
 ir/*
 !ir/.gitkeep
-!ir/FeeManagerV3_Beets_Sonic_ETHUSD6h
 pg_data
+schema.json

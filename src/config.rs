@@ -43,7 +43,7 @@ pub struct ContractConfig {
 pub struct SpecConfig {
     pub name: String,
     #[serde(rename = "startBlock")]
-    pub start_block: u64,
+    pub start_block: Option<u64>,
     pub endpoint: String,
     pub task: String,
 }

@@ -1,6 +1,8 @@
 use crate::ai::IrGenerationResult;
 use crate::config::Config;
 use crate::ir::Ir;
+use crate::schema_diff::{SchemaDiff, TableDiff};
+use crate::schema_state::{ColumnState, IndexState, SchemaState, TableState};
 use anyhow::{Context, Result};
 use chrono::Utc;
 use sqlx::migrate::Migrator;
@@ -11,7 +13,7 @@ use std::path::Path;
 pub struct Migration;
 
 impl Migration {
-    /// Generate SQLx migrations from IR files
+    /// Generate SQLx migrations from IR files using schema diffing
     pub fn generate_from_ir(config: &Config) -> Result<()> {
         tracing::info!("Generating database migrations from IR");
 
@@ -21,72 +23,206 @@ impl Migration {
             fs::create_dir_all(migrations_dir).context("Failed to create migrations directory")?;
         }
 
-        // Load all IR files
+        // Load previous schema state (if it exists)
+        let state_file = Path::new("schema.json");
+        let old_state = if state_file.exists() {
+            tracing::info!("Loading previous schema state from schema.json");
+            SchemaState::load(state_file)?
+        } else {
+            tracing::info!("No previous schema state found - this is an initial migration");
+            SchemaState::new()
+        };
+
+        // Build new schema state from IR files
         let ir_results = Ir::load_all_ir(config)?;
+        let new_state = Self::build_schema_state_from_ir(&ir_results)?;
 
-        // Generate timestamp for migration file in SQLx format
-        // SQLx expects: <VERSION>_<DESCRIPTION>.sql where VERSION is typically YYYYMMDDHHmmss
-        let timestamp = Utc::now().format("%Y%m%d%H%M%S").to_string();
+        // Compute diff
+        let diff = SchemaDiff::compute(&old_state, &new_state);
 
-        // Collect all table creation SQL
-        let mut up_sql = String::new();
-
-        up_sql.push_str("-- Auto-generated migration from IR\n\n");
-
-        for (contract_name, spec_name, ir) in ir_results {
-            tracing::info!("  Processing: {} / {}", contract_name, spec_name);
-
-            // Generate CREATE TABLE statement
-            let create_table = Self::generate_create_table(&ir)?;
-            up_sql.push_str(&format!("-- {}/{}\n", contract_name, spec_name));
-            up_sql.push_str(&create_table);
-            up_sql.push_str("\n\n");
-
-            // Generate indexes with unique names per table
-            for (_idx, index_sql) in ir.table_schema.indexes.iter().enumerate() {
-                // Replace table name placeholder
-                let mut index_sql = index_sql.replace("{table_name}", &ir.table_schema.table_name);
-
-                // Make index names unique by prefixing with table name
-                // This handles cases like: CREATE INDEX idx_name ON table(column)
-                if let Some(idx_pos) = index_sql.find("CREATE INDEX ") {
-                    if let Some(on_pos) = index_sql.find(" ON ") {
-                        let start = idx_pos + "CREATE INDEX ".len();
-                        let old_index_name = &index_sql[start..on_pos];
-                        let new_index_name = format!("{}_{}", ir.table_schema.table_name, old_index_name);
-                        index_sql = index_sql.replace(old_index_name, &new_index_name);
-                    }
-                }
-
-                up_sql.push_str(&index_sql);
-                up_sql.push_str(";\n");
-            }
-            up_sql.push_str("\n");
+        if !diff.has_changes() {
+            tracing::info!("No schema changes detected. Skipping migration generation.");
+            return Ok(());
         }
 
-        // Write migration files with SQLx naming convention: <VERSION>_<DESCRIPTION>.sql
-        let up_file = migrations_dir.join(format!("{}_auto_generated_from_ir.sql", timestamp));
+        // Generate migration SQL based on diff
+        let timestamp = Utc::now().format("%Y%m%d%H%M%S").to_string();
+        let migration_sql = Self::generate_migration_sql(&diff)?;
 
-        fs::write(&up_file, up_sql).context("Failed to write up migration file")?;
+        // Write migration file
+        let description = if diff.is_initial() {
+            "initial_schema"
+        } else {
+            "schema_update"
+        };
+        let migration_file = migrations_dir.join(format!("{}_{}.sql", timestamp, description));
 
-        tracing::info!("Generated migration files:");
-        tracing::info!("  Up:   {:?}", up_file);
+        fs::write(&migration_file, migration_sql)
+            .context("Failed to write migration file")?;
+
+        // Save new schema state
+        new_state.save(state_file)?;
+
+        tracing::info!("Generated migration file: {:?}", migration_file);
+        tracing::info!("Schema state saved to schema.json");
 
         Ok(())
     }
 
-    /// Generate CREATE TABLE statement from IR
-    fn generate_create_table(ir: &IrGenerationResult) -> Result<String> {
-        let mut sql = format!(
-            "CREATE TABLE IF NOT EXISTS {} (\n",
-            ir.table_schema.table_name
-        );
+    /// Build SchemaState from IR results
+    fn build_schema_state_from_ir(
+        ir_results: &[(String, String, IrGenerationResult)],
+    ) -> Result<SchemaState> {
+        let mut state = SchemaState::new();
+
+        for (contract_name, spec_name, ir) in ir_results {
+            let mut table = TableState::new(
+                ir.table_schema.table_name.clone(),
+                contract_name.clone(),
+                spec_name.clone(),
+            );
+
+            // Add columns
+            for column in &ir.table_schema.columns {
+                table.add_column(ColumnState::new(
+                    column.name.clone(),
+                    column.column_type.clone(),
+                ));
+            }
+
+            // Add indexes
+            for index_sql in &ir.table_schema.indexes {
+                // Replace table name placeholder
+                let index_sql = index_sql.replace("{table_name}", &ir.table_schema.table_name);
+
+                // Make index names unique by prefixing with table name
+                let index_sql = Self::make_index_name_unique(&index_sql, &ir.table_schema.table_name);
+
+                // Extract index name
+                let index_name = IndexState::extract_index_name(&index_sql)
+                    .unwrap_or_else(|| format!("idx_{}", table.columns.len()));
+
+                table.add_index(IndexState::new(index_name, index_sql));
+            }
+
+            state.add_table(table);
+        }
+
+        Ok(state)
+    }
+
+    /// Generate migration SQL from schema diff
+    fn generate_migration_sql(diff: &SchemaDiff) -> Result<String> {
+        let mut sql = String::new();
+
+        sql.push_str("-- Auto-generated migration from IR\n");
+        sql.push_str(&format!("-- Generated at: {}\n\n", chrono::Utc::now().to_rfc3339()));
+
+        // Handle new tables (initial migration or new tables added)
+        if !diff.tables_added.is_empty() {
+            sql.push_str("-- Create new tables\n\n");
+
+            for table in &diff.tables_added {
+                sql.push_str(&format!(
+                    "-- {}/{}\n",
+                    table.source.contract_name, table.source.spec_name
+                ));
+
+                // Generate CREATE TABLE
+                sql.push_str(&Self::generate_create_table_from_state(table)?);
+                sql.push_str("\n");
+
+                // Generate indexes
+                for index in &table.indexes {
+                    sql.push_str(&index.definition);
+                    sql.push_str(";\n");
+                }
+                sql.push_str("\n");
+            }
+        }
+
+        // Handle dropped tables
+        if !diff.tables_dropped.is_empty() {
+            sql.push_str("-- Drop removed tables\n\n");
+
+            for table_name in &diff.tables_dropped {
+                sql.push_str(&format!("DROP TABLE IF EXISTS {} CASCADE;\n", table_name));
+            }
+            sql.push_str("\n");
+        }
+
+        // Handle modified tables
+        if !diff.tables_modified.is_empty() {
+            sql.push_str("-- Modify existing tables\n\n");
+
+            for table_diff in &diff.tables_modified {
+                sql.push_str(&Self::generate_table_modification_sql(table_diff)?);
+            }
+        }
+
+        Ok(sql)
+    }
+
+    /// Generate SQL for modifying an existing table
+    fn generate_table_modification_sql(table_diff: &TableDiff) -> Result<String> {
+        let mut sql = String::new();
+
+        sql.push_str(&format!("-- Modify table: {}\n", table_diff.table_name));
+
+        // Add new columns
+        for column in &table_diff.columns_added {
+            sql.push_str(&format!(
+                "ALTER TABLE {} ADD COLUMN IF NOT EXISTS {} {};\n",
+                table_diff.table_name, column.name, column.column_type
+            ));
+        }
+
+        // Drop columns
+        for column_name in &table_diff.columns_dropped {
+            sql.push_str(&format!(
+                "ALTER TABLE {} DROP COLUMN IF EXISTS {} CASCADE;\n",
+                table_diff.table_name, column_name
+            ));
+        }
+
+        // Modify columns (type changes)
+        for column_mod in &table_diff.columns_modified {
+            sql.push_str(&format!(
+                "-- WARNING: Manual review required for column type change\n"
+            ));
+            sql.push_str(&format!(
+                "-- ALTER TABLE {} ALTER COLUMN {} TYPE {}; -- Old type: {}\n",
+                table_diff.table_name,
+                column_mod.column_name,
+                column_mod.new_type,
+                column_mod.old_type
+            ));
+        }
+
+        // Drop indexes
+        for index_name in &table_diff.indexes_dropped {
+            sql.push_str(&format!("DROP INDEX IF EXISTS {};\n", index_name));
+        }
+
+        // Add new indexes
+        for index in &table_diff.indexes_added {
+            sql.push_str(&format!("{};\n", index.definition));
+        }
+
+        sql.push_str("\n");
+
+        Ok(sql)
+    }
+
+    /// Generate CREATE TABLE statement from TableState
+    fn generate_create_table_from_state(table: &TableState) -> Result<String> {
+        let mut sql = format!("CREATE TABLE IF NOT EXISTS {} (\n", table.name);
 
         // Add columns
-        for (i, column) in ir.table_schema.columns.iter().enumerate() {
+        for (i, column) in table.columns.iter().enumerate() {
             sql.push_str(&format!("    {} {}", column.name, column.column_type));
 
-            if i < ir.table_schema.columns.len() - 1 {
+            if i < table.columns.len() - 1 {
                 sql.push_str(",\n");
             } else {
                 sql.push('\n');
@@ -96,6 +232,22 @@ impl Migration {
         sql.push_str(");\n");
 
         Ok(sql)
+    }
+
+    /// Make index name unique by prefixing with table name
+    fn make_index_name_unique(index_sql: &str, table_name: &str) -> String {
+        let mut index_sql = index_sql.to_string();
+
+        if let Some(idx_pos) = index_sql.find("CREATE INDEX ") {
+            if let Some(on_pos) = index_sql.find(" ON ") {
+                let start = idx_pos + "CREATE INDEX ".len();
+                let old_index_name = &index_sql[start..on_pos];
+                let new_index_name = format!("{}_{}", table_name, old_index_name);
+                index_sql = index_sql.replace(old_index_name, &new_index_name);
+            }
+        }
+
+        index_sql
     }
 
     /// Run migrations using sqlx
@@ -164,6 +316,10 @@ mod tests {
         IrGenerationResult {
             event_name: event_name.to_string(),
             event_signature: format!("{}(uint256,address)", event_name),
+            start_block: 12345678,
+            contract_address: "0x1234567890123456789012345678901234567890".to_string(),
+            chain: "ethereum".to_string(),
+            endpoint: format!("/test/{}", event_name.to_lowercase()),
             indexed_fields: vec![
                 EventField {
                     name: "amount".to_string(),
@@ -228,7 +384,7 @@ mod tests {
                 .iter()
                 .map(|name| SpecConfig {
                     name: name.to_string(),
-                    start_block: 0,
+                    start_block: Some(0),
                     endpoint: format!("/test/{}", name),
                     task: "Test task".to_string(),
                 })
@@ -261,52 +417,9 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_generate_create_table() {
-        let ir = create_mock_ir("test_table", "TestEvent");
-        let result = Migration::generate_create_table(&ir);
-
-        assert!(result.is_ok(), "Should generate CREATE TABLE successfully");
-
-        let sql = result.unwrap();
-
-        // Check that the SQL contains expected elements
-        assert!(sql.contains("CREATE TABLE IF NOT EXISTS test_table"));
-        assert!(sql.contains("id BIGSERIAL PRIMARY KEY"));
-        assert!(sql.contains("block_number BIGINT NOT NULL"));
-        assert!(sql.contains("block_timestamp BIGINT NOT NULL"));
-        assert!(sql.contains("amount NUMERIC(78, 0) NOT NULL"));
-        assert!(sql.contains("user VARCHAR(42) NOT NULL"));
-        assert!(sql.ends_with(");\n"));
-
-        // Check column ordering (commas between columns, no comma after last)
-        let lines: Vec<&str> = sql.lines().collect();
-        assert!(lines[1].ends_with("id BIGSERIAL PRIMARY KEY,"));
-        assert!(lines[lines.len() - 2].ends_with("user VARCHAR(42) NOT NULL"));
-    }
-
-    #[test]
-    fn test_generate_create_table_with_different_columns() {
-        let mut ir = create_mock_ir("custom_table", "CustomEvent");
-
-        // Customize columns
-        ir.table_schema.columns = vec![
-            ColumnDef {
-                name: "id".to_string(),
-                column_type: "BIGSERIAL PRIMARY KEY".to_string(),
-            },
-            ColumnDef {
-                name: "custom_field".to_string(),
-                column_type: "TEXT NOT NULL".to_string(),
-            },
-        ];
-
-        let sql = Migration::generate_create_table(&ir).unwrap();
-
-        assert!(sql.contains("CREATE TABLE IF NOT EXISTS custom_table"));
-        assert!(sql.contains("custom_field TEXT NOT NULL"));
-        assert_eq!(sql.matches(',').count(), 1, "Should have exactly one comma");
-    }
+    // NOTE: These tests have been removed as they tested the old implementation
+    // The new schema-diff based implementation is tested through integration tests below
+    // and unit tests in schema_state.rs and schema_diff.rs
 
     #[test]
     fn test_generate_from_ir_creates_migration_file() {
@@ -343,15 +456,18 @@ mod tests {
         let migration_file = entries[0].path();
         let filename = migration_file.file_name().unwrap().to_str().unwrap();
 
-        // Check filename format: YYYYMMDDHHmmss_auto_generated_from_ir.sql
-        assert!(filename.ends_with("_auto_generated_from_ir.sql"));
-        assert!(filename.len() > 30); // timestamp + description
+        // Check filename format: YYYYMMDDHHmmss_initial_schema.sql
+        assert!(filename.ends_with("_initial_schema.sql"));
+        assert!(filename.len() > 20); // timestamp + description
 
         // Check file contents
         let contents = fs::read_to_string(&migration_file).unwrap();
         assert!(contents.contains("-- Auto-generated migration from IR"));
         assert!(contents.contains("-- TestContract/Event1"));
         assert!(contents.contains("CREATE TABLE IF NOT EXISTS testcontract_event1"));
+
+        // Check that schema.json was created
+        assert!(Path::new("schema.json").exists());
         // Guard automatically restores directory when dropped
     }
 
@@ -528,7 +644,7 @@ mod tests {
         let filename = entries[0].file_name();
         let filename_str = filename.to_str().unwrap();
 
-        // Check format: YYYYMMDDHHmmss_auto_generated_from_ir.sql
+        // Check format: YYYYMMDDHHmmss_initial_schema.sql
         let parts: Vec<&str> = filename_str.split('_').collect();
 
         // First part should be 14-digit timestamp
@@ -539,7 +655,7 @@ mod tests {
         assert!(filename_str.ends_with(".sql"));
 
         // Should contain description
-        assert!(filename_str.contains("auto_generated_from_ir"));
+        assert!(filename_str.contains("initial_schema"));
         // Guard automatically restores directory when dropped
     }
 

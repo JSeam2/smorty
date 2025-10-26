@@ -32,8 +32,12 @@ impl AiClient {
         &self,
         contract_name: &str,
         spec_name: &str,
+        start_block: Option<u64>,
+        contract_address: &str,
+        chain: &str,
         abi: &Value,
         task_description: &str,
+        endpoint: &str,
     ) -> Result<IrGenerationResult> {
         let system_prompt = r#"You are an expert Ethereum indexer code generator.
 Given a contract ABI and a natural language task description, you will:
@@ -48,6 +52,10 @@ Return your response in the following JSON format:
 {
   "event_name": "EventName",
   "event_signature": "EventName(uint256,address)",
+  "start_block": 12345678,
+  "contract_address: "0xContractAddress",
+  "chain": "chain_name",
+  "endpoint: "/"
   "indexed_fields": [
     {"name": "field1", "solidity_type": "uint256", "rust_type": "String", "indexed": false},
     {"name": "field2", "solidity_type": "address", "rust_type": "String", "indexed": true}
@@ -74,9 +82,10 @@ Return your response in the following JSON format:
     {"name": "startBlockNumber", "type": "Option<u64>", "default": null},
     {"name": "endBlockNumber", "type": "Option<u64>", "default": null},
     {"name": "startTimestamp", "type": "Option<i64>", "default": null},
-    {"name": "endTimestamp", "type": "Option<i64>", "default": null}
+    {"name": "endTimestamp", "type": "Option<i64>", "default": null},
+    TODO: add any additional filters based on indexed fields
   ],
-  "endpoint_description": "Get time series of fee updates with optional filtering"
+  "endpoint_description": "A brief and concise description of the event to be indexed"
 }
 
 Important Solidity to PostgreSQL type mappings:
@@ -102,9 +111,21 @@ IMPORTANT: Table naming convention (STRICT):
 - DO NOT use generic names like "pool_updated_events" or "fee_updated_events"
 - This ensures tables from different contracts never collide, even if they track the same event types."#;
 
+        let sblock = start_block.unwrap_or(0);
+
         let user_prompt = format!(
             r#"Contract: {}
-Spec Name: {}
+Spec Name:
+{}
+
+Start Block:
+{}
+
+Contract Address:
+{}
+
+Chain:
+{}
 
 ABI:
 {}
@@ -112,11 +133,18 @@ ABI:
 Task Description:
 {}
 
+Endpoint:
+{}
+
 Please generate the IR for this indexing specification."#,
             contract_name,
             spec_name,
+            sblock,
+            contract_address,
+            chain,
             serde_json::to_string_pretty(abi)?,
-            task_description
+            task_description,
+            endpoint,
         );
 
         let messages = vec![
@@ -181,6 +209,10 @@ Please generate the IR for this indexing specification."#,
 pub struct IrGenerationResult {
     pub event_name: String,
     pub event_signature: String,
+    pub start_block: u64,
+    pub contract_address: String,
+    pub chain: String,
+    pub endpoint: String,
     pub indexed_fields: Vec<EventField>,
     pub table_schema: TableSchema,
     pub query_params: Vec<QueryParam>,

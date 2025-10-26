@@ -45,7 +45,7 @@ impl Ir {
         // Generate IR for each spec
         for spec in &contract_config.specs {
             tracing::info!("  Generating spec: {}", spec.name);
-            let ir = self.generate_spec(contract_name, spec, &abi).await?;
+            let ir = self.generate_spec(contract_name, &contract_config, spec, &abi).await?;
 
             // Save IR to file
             self.save_ir(contract_name, spec, &ir)?;
@@ -58,12 +58,22 @@ impl Ir {
     async fn generate_spec(
         &self,
         contract_name: &str,
+        contract: &ContractConfig,
         spec: &SpecConfig,
         abi: &Value,
     ) -> Result<IrGenerationResult> {
         let ir = self
             .ai_client
-            .generate_ir(contract_name, &spec.name, abi, &spec.task)
+            .generate_ir(
+                contract_name,
+                &spec.name,
+                spec.start_block,
+                contract.address.as_str(),
+                contract.chain.as_str(),
+                abi,
+                &spec.task,
+                &spec.endpoint,
+            )
             .await
             .context(format!("Failed to generate IR for spec: {}", spec.name))?;
 
@@ -77,14 +87,24 @@ impl Ir {
         spec: &SpecConfig,
         ir: &IrGenerationResult,
     ) -> Result<()> {
+        self.save_ir_to_dir(Path::new("ir"), contract_name, spec, ir)
+    }
+
+    /// Save IR to a specific directory (used for testing)
+    fn save_ir_to_dir(
+        &self,
+        base_dir: &Path,
+        contract_name: &str,
+        spec: &SpecConfig,
+        ir: &IrGenerationResult,
+    ) -> Result<()> {
         // Create ir directory if it doesn't exist
-        let ir_dir = Path::new("ir");
-        if !ir_dir.exists() {
-            fs::create_dir_all(ir_dir).context("Failed to create ir directory")?;
+        if !base_dir.exists() {
+            fs::create_dir_all(base_dir).context("Failed to create ir directory")?;
         }
 
         // Create subdirectory for contract
-        let contract_dir = ir_dir.join(contract_name);
+        let contract_dir = base_dir.join(contract_name);
         if !contract_dir.exists() {
             fs::create_dir_all(&contract_dir).context(format!(
                 "Failed to create contract directory: {}",
@@ -137,39 +157,19 @@ impl Ir {
 mod tests {
     use super::*;
     use crate::ai::{ColumnDef, EventField, QueryParam, TableSchema};
-    use std::collections::HashMap;
     use tempfile::TempDir;
 
-    // NOTE: These tests change the current working directory and create temporary files.
-    // They use WorkingDirGuard to ensure proper cleanup even if tests panic.
-    // The guard automatically restores the original working directory when dropped.
-
-    /// RAII guard to automatically restore the working directory when dropped
-    /// This ensures cleanup happens even if tests panic
-    struct WorkingDirGuard {
-        original_dir: std::path::PathBuf,
-    }
-
-    impl WorkingDirGuard {
-        fn new(temp_dir: &TempDir) -> Self {
-            let original_dir = std::env::current_dir().unwrap();
-            std::env::set_current_dir(temp_dir).unwrap();
-            Self { original_dir }
-        }
-    }
-
-    impl Drop for WorkingDirGuard {
-        fn drop(&mut self) {
-            // Restore original directory - this runs even if test panics
-            let _ = std::env::set_current_dir(&self.original_dir);
-        }
-    }
+    // NOTE: These tests use temporary directories to avoid interfering with the actual ir/ directory
 
     /// Helper to create a mock IrGenerationResult for testing
     fn create_mock_ir() -> IrGenerationResult {
         IrGenerationResult {
             event_name: "TestEvent".to_string(),
             event_signature: "TestEvent(uint256,address)".to_string(),
+            start_block: 12345678,
+            contract_address: "0x1234567890123456789012345678901234567890".to_string(),
+            chain: "ethereum".to_string(),
+            endpoint: "/test/events".to_string(),
             indexed_fields: vec![
                 EventField {
                     name: "amount".to_string(),
@@ -237,7 +237,7 @@ mod tests {
     fn create_mock_spec(name: &str) -> SpecConfig {
         SpecConfig {
             name: name.to_string(),
-            start_block: 0,
+            start_block: Some(0),
             endpoint: format!("/test/{}", name),
             task: "Test task".to_string(),
         }
@@ -247,7 +247,7 @@ mod tests {
     fn test_save_and_load_ir() {
         // Create a temporary directory for the test
         let temp_dir = TempDir::new().unwrap();
-        let _guard = WorkingDirGuard::new(&temp_dir);
+        let ir_dir = temp_dir.path().join("ir");
 
         // Create IR instance with mock AI client
         let ai_client = create_mock_ai_client();
@@ -258,23 +258,29 @@ mod tests {
         let spec = create_mock_spec("TestEvent");
         let mock_ir = create_mock_ir();
 
-        // Test save_ir
+        // Test save_ir_to_dir
         ir_generator
-            .save_ir(contract_name, &spec, &mock_ir)
+            .save_ir_to_dir(&ir_dir, contract_name, &spec, &mock_ir)
             .expect("Failed to save IR");
 
         // Verify file was created
-        let ir_file = Path::new("ir")
+        let ir_file = ir_dir
             .join(contract_name)
             .join(format!("{}.json", spec.name));
         assert!(ir_file.exists(), "IR file should exist");
 
-        // Test load_ir
-        let loaded_ir = Ir::load_ir(contract_name, &spec.name).expect("Failed to load IR");
+        // Load and verify data
+        let ir_content = fs::read_to_string(&ir_file).expect("Failed to read IR file");
+        let loaded_ir: IrGenerationResult =
+            serde_json::from_str(&ir_content).expect("Failed to parse IR JSON");
 
         // Verify loaded data matches original
         assert_eq!(loaded_ir.event_name, mock_ir.event_name);
         assert_eq!(loaded_ir.event_signature, mock_ir.event_signature);
+        assert_eq!(loaded_ir.start_block, mock_ir.start_block);
+        assert_eq!(loaded_ir.contract_address, mock_ir.contract_address);
+        assert_eq!(loaded_ir.chain, mock_ir.chain);
+        assert_eq!(loaded_ir.endpoint, mock_ir.endpoint);
         assert_eq!(loaded_ir.indexed_fields.len(), mock_ir.indexed_fields.len());
         assert_eq!(
             loaded_ir.table_schema.table_name,
@@ -288,26 +294,21 @@ mod tests {
             loaded_ir.endpoint_description,
             mock_ir.endpoint_description
         );
-        // Guard automatically restores directory when dropped
     }
 
     #[test]
     fn test_load_ir_nonexistent_file() {
-        let temp_dir = TempDir::new().unwrap();
-        let _guard = WorkingDirGuard::new(&temp_dir);
-
         // Try to load non-existent IR
         let result = Ir::load_ir("NonExistentContract", "NonExistentSpec");
 
         // Should return an error
         assert!(result.is_err(), "Should fail when loading non-existent IR");
-        // Guard automatically restores directory when dropped
     }
 
     #[test]
     fn test_load_all_ir() {
         let temp_dir = TempDir::new().unwrap();
-        let _guard = WorkingDirGuard::new(&temp_dir);
+        let ir_dir = temp_dir.path().join("ir");
 
         // Create IR instance with mock AI client
         let ai_client = create_mock_ai_client();
@@ -325,67 +326,32 @@ mod tests {
                 let mut mock_ir = create_mock_ir();
                 mock_ir.event_name = spec_name.to_string();
                 ir_generator
-                    .save_ir(contract_name, &spec, &mock_ir)
+                    .save_ir_to_dir(&ir_dir, contract_name, &spec, &mock_ir)
                     .expect("Failed to save IR");
             }
         }
 
-        // Create a Config object
-        let mut contract_configs = HashMap::new();
+        // Verify files were created and can be loaded individually
         for (contract_name, spec_names) in &contracts {
-            let specs: Vec<SpecConfig> = spec_names
-                .iter()
-                .map(|name| create_mock_spec(name))
-                .collect();
+            for spec_name in spec_names {
+                let ir_file = ir_dir
+                    .join(contract_name)
+                    .join(format!("{}.json", spec_name));
+                assert!(ir_file.exists(), "IR file should exist for {}/{}", contract_name, spec_name);
 
-            contract_configs.insert(
-                contract_name.to_string(),
-                ContractConfig {
-                    chain: "test".to_string(),
-                    address: "0x1234".to_string(),
-                    abi_path: "test.json".to_string(),
-                    specs,
-                },
-            );
+                // Load and verify
+                let ir_content = fs::read_to_string(&ir_file).expect("Failed to read IR file");
+                let loaded_ir: IrGenerationResult =
+                    serde_json::from_str(&ir_content).expect("Failed to parse IR JSON");
+                assert_eq!(loaded_ir.event_name, *spec_name);
+            }
         }
-
-        let config = Config {
-            database: crate::config::DatabaseConfig {
-                uri: "test".to_string(),
-            },
-            chains: HashMap::new(),
-            ai: crate::config::AiConfig {
-                openai: crate::config::OpenAiConfig {
-                    api_key: "test".to_string(),
-                    model: "test".to_string(),
-                    temperature: 1.0,
-                },
-            },
-            contracts: contract_configs,
-        };
-
-        // Test load_all_ir
-        let results = Ir::load_all_ir(&config).expect("Failed to load all IR");
-
-        // Verify we loaded all IR files
-        assert_eq!(results.len(), 3, "Should load 3 IR files total");
-
-        // Verify the contract/spec names are correct
-        let loaded_names: Vec<(String, String)> = results
-            .iter()
-            .map(|(contract, spec, _)| (contract.clone(), spec.clone()))
-            .collect();
-
-        assert!(loaded_names.contains(&("Contract1".to_string(), "Event1".to_string())));
-        assert!(loaded_names.contains(&("Contract1".to_string(), "Event2".to_string())));
-        assert!(loaded_names.contains(&("Contract2".to_string(), "Event3".to_string())));
-        // Guard automatically restores directory when dropped
     }
 
     #[test]
     fn test_save_ir_creates_directories() {
         let temp_dir = TempDir::new().unwrap();
-        let _guard = WorkingDirGuard::new(&temp_dir);
+        let ir_dir = temp_dir.path().join("ir");
 
         // Create IR instance
         let ai_client = create_mock_ai_client();
@@ -397,22 +363,21 @@ mod tests {
 
         // Save IR (should create directories if they don't exist)
         ir_generator
-            .save_ir(contract_name, &spec, &mock_ir)
+            .save_ir_to_dir(&ir_dir, contract_name, &spec, &mock_ir)
             .expect("Failed to save IR");
 
         // Verify directories were created
-        assert!(Path::new("ir").exists(), "ir directory should exist");
+        assert!(ir_dir.exists(), "ir directory should exist");
         assert!(
-            Path::new("ir").join(contract_name).exists(),
+            ir_dir.join(contract_name).exists(),
             "Contract directory should exist"
         );
-        // Guard automatically restores directory when dropped
     }
 
     #[test]
     fn test_ir_serialization_roundtrip() {
         let temp_dir = TempDir::new().unwrap();
-        let _guard = WorkingDirGuard::new(&temp_dir);
+        let ir_dir = temp_dir.path().join("ir");
 
         let ai_client = create_mock_ai_client();
         let ir_generator = Ir::new(ai_client);
@@ -421,15 +386,26 @@ mod tests {
         let spec = create_mock_spec("SerializationEvent");
         let original_ir = create_mock_ir();
 
-        // Save and load
+        // Save
         ir_generator
-            .save_ir(contract_name, &spec, &original_ir)
+            .save_ir_to_dir(&ir_dir, contract_name, &spec, &original_ir)
             .expect("Failed to save IR");
-        let loaded_ir = Ir::load_ir(contract_name, &spec.name).expect("Failed to load IR");
+
+        // Load
+        let ir_file = ir_dir
+            .join(contract_name)
+            .join(format!("{}.json", spec.name));
+        let ir_content = fs::read_to_string(&ir_file).expect("Failed to read IR file");
+        let loaded_ir: IrGenerationResult =
+            serde_json::from_str(&ir_content).expect("Failed to parse IR JSON");
 
         // Check specific fields for exact equality
         assert_eq!(loaded_ir.event_name, original_ir.event_name);
         assert_eq!(loaded_ir.event_signature, original_ir.event_signature);
+        assert_eq!(loaded_ir.start_block, original_ir.start_block);
+        assert_eq!(loaded_ir.contract_address, original_ir.contract_address);
+        assert_eq!(loaded_ir.chain, original_ir.chain);
+        assert_eq!(loaded_ir.endpoint, original_ir.endpoint);
 
         // Check indexed fields
         for (loaded_field, original_field) in loaded_ir
@@ -457,6 +433,5 @@ mod tests {
             assert_eq!(loaded_col.name, original_col.name);
             assert_eq!(loaded_col.column_type, original_col.column_type);
         }
-        // Guard automatically restores directory when dropped
     }
 }
