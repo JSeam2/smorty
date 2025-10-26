@@ -5,11 +5,11 @@ use serde_json::Value;
 use std::fs;
 use std::path::Path;
 
-pub struct IrGenerator {
+pub struct Ir {
     ai_client: AiClient,
 }
 
-impl IrGenerator {
+impl Ir {
     pub fn new(ai_client: AiClient) -> Self {
         Self { ai_client }
     }
@@ -35,17 +35,17 @@ impl IrGenerator {
         contract_config: &ContractConfig,
     ) -> Result<()> {
         // Load ABI
-        let abi_content = fs::read_to_string(&contract_config.abi_path)
-            .context(format!("Failed to read ABI file: {}", contract_config.abi_path))?;
+        let abi_content = fs::read_to_string(&contract_config.abi_path).context(format!(
+            "Failed to read ABI file: {}",
+            contract_config.abi_path
+        ))?;
 
-        let abi: Value = serde_json::from_str(&abi_content)
-            .context("Failed to parse ABI JSON")?;
+        let abi: Value = serde_json::from_str(&abi_content).context("Failed to parse ABI JSON")?;
 
         // Generate IR for each spec
         for spec in &contract_config.specs {
             tracing::info!("  Generating spec: {}", spec.name);
-            let ir = self.generate_spec(contract_name, spec, &abi)
-                .await?;
+            let ir = self.generate_spec(contract_name, spec, &abi).await?;
 
             // Save IR to file
             self.save_ir(contract_name, spec, &ir)?;
@@ -61,7 +61,8 @@ impl IrGenerator {
         spec: &SpecConfig,
         abi: &Value,
     ) -> Result<IrGenerationResult> {
-        let ir = self.ai_client
+        let ir = self
+            .ai_client
             .generate_ir(contract_name, &spec.name, abi, &spec.task)
             .await
             .context(format!("Failed to generate IR for spec: {}", spec.name))?;
@@ -79,24 +80,23 @@ impl IrGenerator {
         // Create ir directory if it doesn't exist
         let ir_dir = Path::new("ir");
         if !ir_dir.exists() {
-            fs::create_dir_all(ir_dir)
-                .context("Failed to create ir directory")?;
+            fs::create_dir_all(ir_dir).context("Failed to create ir directory")?;
         }
 
         // Create subdirectory for contract
         let contract_dir = ir_dir.join(contract_name);
         if !contract_dir.exists() {
-            fs::create_dir_all(&contract_dir)
-                .context(format!("Failed to create contract directory: {}", contract_name))?;
+            fs::create_dir_all(&contract_dir).context(format!(
+                "Failed to create contract directory: {}",
+                contract_name
+            ))?;
         }
 
         // Save IR as JSON
         let ir_file = contract_dir.join(format!("{}.json", spec.name));
-        let ir_json = serde_json::to_string_pretty(ir)
-            .context("Failed to serialize IR")?;
+        let ir_json = serde_json::to_string_pretty(ir).context("Failed to serialize IR")?;
 
-        fs::write(&ir_file, ir_json)
-            .context(format!("Failed to write IR file: {:?}", ir_file))?;
+        fs::write(&ir_file, ir_json).context(format!("Failed to write IR file: {:?}", ir_file))?;
 
         tracing::info!("    Saved IR to: {:?}", ir_file);
 
@@ -112,8 +112,8 @@ impl IrGenerator {
         let ir_content = fs::read_to_string(&ir_file)
             .context(format!("Failed to read IR file: {:?}", ir_file))?;
 
-        let ir: IrGenerationResult = serde_json::from_str(&ir_content)
-            .context("Failed to parse IR JSON")?;
+        let ir: IrGenerationResult =
+            serde_json::from_str(&ir_content).context("Failed to parse IR JSON")?;
 
         Ok(ir)
     }

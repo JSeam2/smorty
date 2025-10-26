@@ -7,3 +7,4 @@ migrations/*
 !migrations/.gitkeep
 ir/*
 !ir/.gitkeep
+pg_data

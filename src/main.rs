@@ -1,13 +1,16 @@
 mod ai;
 mod cli;
 mod config;
-mod ir_generator;
-mod migration_generator;
+mod ir;
+mod migration;
 
+use ai::AiClient;
 use anyhow::{Context, Result};
 use clap::Parser;
 use cli::{Cli, Commands};
 use config::Config;
+use ir::Ir;
+use migration::Migration;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
@@ -25,23 +28,27 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     // Load config
-    let config = Config::load(&cli.config)
-        .context(format!("Failed to load config from: {}", cli.config))?;
+    let config =
+        Config::load(&cli.config).context(format!("Failed to load config from: {}", cli.config))?;
 
     tracing::info!("Loaded config from: {}", cli.config);
 
     // Handle commands
     match cli.command {
-        Commands::GenerateIr { force } => {
-            generate_ir(&config, force).await?;
+        Commands::GenIr { force } => {
+            gen_ir(&config, force).await?;
         }
-        Commands::GenerateMigrations => {
-            generate_migrations(&config)?;
+        Commands::GenMigration => {
+            gen_migration(&config)?;
         }
         Commands::Migrate => {
             migrate(&config).await?;
         }
-        Commands::Index { daemon, contract, spec } => {
+        Commands::Index {
+            daemon,
+            contract,
+            spec,
+        } => {
             index(&config, daemon, contract, spec).await?;
         }
         Commands::Serve { host, port } => {
@@ -55,18 +62,18 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn generate_ir(config: &Config, _force: bool) -> Result<()> {
+async fn gen_ir(config: &Config, _force: bool) -> Result<()> {
     tracing::info!("Starting IR generation");
 
     // Create AI client
-    let ai_client = ai::AiClient::new(
+    let ai_client = AiClient::new(
         config.ai.openai.api_key.clone(),
         config.ai.openai.model.clone(),
         config.ai.openai.temperature,
     );
 
     // Generate IR
-    let ir_generator = ir_generator::IrGenerator::new(ai_client);
+    let ir_generator = Ir::new(ai_client);
     ir_generator.generate_all(config).await?;
 
     tracing::info!("IR generation complete");
@@ -74,10 +81,10 @@ async fn generate_ir(config: &Config, _force: bool) -> Result<()> {
     Ok(())
 }
 
-fn generate_migrations(config: &Config) -> Result<()> {
-    tracing::info!("Generating migrations from IR");
+fn gen_migration(config: &Config) -> Result<()> {
+    tracing::info!("Generating migration from IR");
 
-    migration_generator::MigrationGenerator::generate_from_ir(config)?;
+    migration::Migration::generate_from_ir(config)?;
 
     tracing::info!("Migration generation complete");
 
@@ -87,7 +94,7 @@ fn generate_migrations(config: &Config) -> Result<()> {
 async fn migrate(config: &Config) -> Result<()> {
     tracing::info!("Running database migrations");
 
-    migration_generator::MigrationGenerator::run_migrations(&config.database.uri).await?;
+    Migration::run_migrations(&config.database.uri).await?;
 
     tracing::info!("Migrations complete");
 
@@ -106,22 +113,14 @@ async fn index(
     Ok(())
 }
 
-async fn serve(
-    _config: &Config,
-    host: &str,
-    port: u16,
-) -> Result<()> {
+async fn serve(_config: &Config, host: &str, port: u16) -> Result<()> {
     tracing::info!("Starting API server on {}:{}", host, port);
     tracing::warn!("API server not yet implemented");
     // TODO: Implement API server
     Ok(())
 }
 
-async fn run(
-    _config: &Config,
-    host: &str,
-    port: u16,
-) -> Result<()> {
+async fn run(_config: &Config, host: &str, port: u16) -> Result<()> {
     tracing::info!("Starting indexer and API server on {}:{}", host, port);
     tracing::warn!("Combined mode not yet implemented");
     // TODO: Implement combined mode

@@ -93,7 +93,14 @@ Important Solidity to PostgreSQL type mappings:
 - string -> TEXT
 - bool -> BOOLEAN
 
-For indexed event parameters, note them in the response but they don't need special database treatment."#;
+For indexed event parameters, note them in the response but they don't need special database treatment.
+
+IMPORTANT: Table naming convention (STRICT):
+- ALWAYS use the format: {contract_name}_{spec_name} (in lowercase with underscores)
+- Convert any hyphens, camelCase, or special characters to underscores
+- Example: Contract "FeeManagerV3_Beets_Sonic_ETHUSD6h" + Spec "PoolUpdated" = "feemanagerv3_beets_sonic_ethusd6h_poolupdated"
+- DO NOT use generic names like "pool_updated_events" or "fee_updated_events"
+- This ensures tables from different contracts never collide, even if they track the same event types."#;
 
         let user_prompt = format!(
             r#"Contract: {}

@@ -11,7 +11,7 @@ sonic     = "TODO"
 [ai.openai]
 model = "gpt-5-2025-08-07"
 apiKey = "TODO"
-temperature = 0.0
+temperature = 1.0
 
 # specifications
 [contracts.FeeManagerV3_Beets_Sonic_ETHUSD6h]
@@ -26,7 +26,6 @@ endpoint = "/sonic/FeeManagerV3Beets-Sonic-ETHUSD6h/FeeUpdated"
 task = """
 1. Track event FeeUpdated(uint256 swapFeePercentage).
 2. Persist swapFeePercentage with blockNumber and timestamp for a time series.
-3. Allow limit, offset, startBlockNumber, endBlockNumber, startTimestamp, endTimestamp filters.
 """
 
 [[contracts.FeeManagerV3_Beets_Sonic_ETHUSD6h.specs]]
@@ -36,5 +35,4 @@ endpoint = "/sonic/FeeManagerV3Beets_Sonic_ETHUSD6h/PoolUpdated"
 task = """
 1. Track event PoolUpdated(address indexed pool, uint256 swapFeePercentage).
 2. Persist swapFeePercentage with blockNumber and timestamp for a time series.
-3. Same query filters as above.
 """
