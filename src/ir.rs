@@ -140,6 +140,31 @@ mod tests {
     use std::collections::HashMap;
     use tempfile::TempDir;
 
+    // NOTE: These tests change the current working directory and create temporary files.
+    // They use WorkingDirGuard to ensure proper cleanup even if tests panic.
+    // The guard automatically restores the original working directory when dropped.
+
+    /// RAII guard to automatically restore the working directory when dropped
+    /// This ensures cleanup happens even if tests panic
+    struct WorkingDirGuard {
+        original_dir: std::path::PathBuf,
+    }
+
+    impl WorkingDirGuard {
+        fn new(temp_dir: &TempDir) -> Self {
+            let original_dir = std::env::current_dir().unwrap();
+            std::env::set_current_dir(temp_dir).unwrap();
+            Self { original_dir }
+        }
+    }
+
+    impl Drop for WorkingDirGuard {
+        fn drop(&mut self) {
+            // Restore original directory - this runs even if test panics
+            let _ = std::env::set_current_dir(&self.original_dir);
+        }
+    }
+
     /// Helper to create a mock IrGenerationResult for testing
     fn create_mock_ir() -> IrGenerationResult {
         IrGenerationResult {
@@ -222,8 +247,7 @@ mod tests {
     fn test_save_and_load_ir() {
         // Create a temporary directory for the test
         let temp_dir = TempDir::new().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&temp_dir).unwrap();
+        let _guard = WorkingDirGuard::new(&temp_dir);
 
         // Create IR instance with mock AI client
         let ai_client = create_mock_ai_client();
@@ -264,34 +288,26 @@ mod tests {
             loaded_ir.endpoint_description,
             mock_ir.endpoint_description
         );
-
-        // Cleanup: restore original directory
-        std::env::set_current_dir(original_dir).unwrap();
+        // Guard automatically restores directory when dropped
     }
 
     #[test]
     fn test_load_ir_nonexistent_file() {
         let temp_dir = TempDir::new().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&temp_dir).unwrap();
+        let _guard = WorkingDirGuard::new(&temp_dir);
 
         // Try to load non-existent IR
         let result = Ir::load_ir("NonExistentContract", "NonExistentSpec");
 
         // Should return an error
         assert!(result.is_err(), "Should fail when loading non-existent IR");
-
-        // Cleanup
-        std::env::set_current_dir(original_dir).unwrap();
+        // Guard automatically restores directory when dropped
     }
 
     #[test]
     fn test_load_all_ir() {
         let temp_dir = TempDir::new().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-
-        // Change to temp dir and ensure we restore on exit
-        std::env::set_current_dir(&temp_dir).unwrap();
+        let _guard = WorkingDirGuard::new(&temp_dir);
 
         // Create IR instance with mock AI client
         let ai_client = create_mock_ai_client();
@@ -363,16 +379,13 @@ mod tests {
         assert!(loaded_names.contains(&("Contract1".to_string(), "Event1".to_string())));
         assert!(loaded_names.contains(&("Contract1".to_string(), "Event2".to_string())));
         assert!(loaded_names.contains(&("Contract2".to_string(), "Event3".to_string())));
-
-        // Cleanup
-        std::env::set_current_dir(original_dir).unwrap();
+        // Guard automatically restores directory when dropped
     }
 
     #[test]
     fn test_save_ir_creates_directories() {
         let temp_dir = TempDir::new().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&temp_dir).unwrap();
+        let _guard = WorkingDirGuard::new(&temp_dir);
 
         // Create IR instance
         let ai_client = create_mock_ai_client();
@@ -393,16 +406,13 @@ mod tests {
             Path::new("ir").join(contract_name).exists(),
             "Contract directory should exist"
         );
-
-        // Cleanup
-        std::env::set_current_dir(original_dir).unwrap();
+        // Guard automatically restores directory when dropped
     }
 
     #[test]
     fn test_ir_serialization_roundtrip() {
         let temp_dir = TempDir::new().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&temp_dir).unwrap();
+        let _guard = WorkingDirGuard::new(&temp_dir);
 
         let ai_client = create_mock_ai_client();
         let ir_generator = Ir::new(ai_client);
@@ -447,8 +457,6 @@ mod tests {
             assert_eq!(loaded_col.name, original_col.name);
             assert_eq!(loaded_col.column_type, original_col.column_type);
         }
-
-        // Cleanup
-        std::env::set_current_dir(original_dir).unwrap();
+        // Guard automatically restores directory when dropped
     }
 }

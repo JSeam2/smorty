@@ -155,10 +155,10 @@ Start indexing blockchain events:
 smorty run --port 3000 --host 0.0.0.0
 ```
 
-### 6. Run Unittests
+### 6. Run Tests
 
 ```bash
-cargo test -- --test-threads=1
+cargo nextest run
 ```
 
 ## Project Structure

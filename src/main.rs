@@ -38,18 +38,14 @@ async fn main() -> Result<()> {
         Commands::Migrate => {
             migrate(&config).await?;
         }
-        Commands::Index {
-            daemon,
-            contract,
-            spec,
-        } => {
-            index(&config, daemon, contract, spec).await?;
+        Commands::Index { daemon } => {
+            index(&config, daemon).await?;
         }
-        Commands::Serve { host, port } => {
-            serve(&config, &host, port).await?;
+        Commands::Serve { address, port } => {
+            serve(&config, &address, port).await?;
         }
-        Commands::Run { host, port } => {
-            run(&config, &host, port).await?;
+        Commands::Run { address, port } => {
+            run(&config, &address, port).await?;
         }
     }
 
@@ -98,8 +94,6 @@ async fn migrate(config: &Config) -> Result<()> {
 async fn index(
     _config: &Config,
     _daemon: bool,
-    _contract: Option<String>,
-    _spec: Option<String>,
 ) -> Result<()> {
     tracing::info!("Starting indexer");
     tracing::warn!("Indexer not yet implemented");
@@ -107,15 +101,15 @@ async fn index(
     Ok(())
 }
 
-async fn serve(_config: &Config, host: &str, port: u16) -> Result<()> {
-    tracing::info!("Starting API server on {}:{}", host, port);
+async fn serve(_config: &Config, address: &str, port: u16) -> Result<()> {
+    tracing::info!("Starting API server on {}:{}", address, port);
     tracing::warn!("API server not yet implemented");
     // TODO: Implement API server
     Ok(())
 }
 
-async fn run(_config: &Config, host: &str, port: u16) -> Result<()> {
-    tracing::info!("Starting indexer and API server on {}:{}", host, port);
+async fn run(_config: &Config, address: &str, port: u16) -> Result<()> {
+    tracing::info!("Starting indexer and API server on {}:{}", address, port);
     tracing::warn!("Combined mode not yet implemented");
     // TODO: Implement combined mode
     Ok(())

@@ -134,6 +134,31 @@ mod tests {
     use std::collections::HashMap;
     use tempfile::TempDir;
 
+    // NOTE: These tests change the current working directory and create temporary files.
+    // They use WorkingDirGuard to ensure proper cleanup even if tests panic.
+    // The guard automatically restores the original working directory when dropped.
+
+    /// RAII guard to automatically restore the working directory when dropped
+    /// This ensures cleanup happens even if tests panic
+    struct WorkingDirGuard {
+        original_dir: std::path::PathBuf,
+    }
+
+    impl WorkingDirGuard {
+        fn new(temp_dir: &TempDir) -> Self {
+            let original_dir = std::env::current_dir().unwrap();
+            std::env::set_current_dir(temp_dir).unwrap();
+            Self { original_dir }
+        }
+    }
+
+    impl Drop for WorkingDirGuard {
+        fn drop(&mut self) {
+            // Restore original directory - this runs even if test panics
+            let _ = std::env::set_current_dir(&self.original_dir);
+        }
+    }
+
     /// Helper to create a mock IrGenerationResult for testing
     fn create_mock_ir(table_name: &str, event_name: &str) -> IrGenerationResult {
         IrGenerationResult {
@@ -286,8 +311,7 @@ mod tests {
     #[test]
     fn test_generate_from_ir_creates_migration_file() {
         let temp_dir = TempDir::new().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&temp_dir).unwrap();
+        let _guard = WorkingDirGuard::new(&temp_dir);
 
         // Create IR files first
         let config = create_mock_config(vec![("TestContract", vec!["Event1"])]);
@@ -328,16 +352,13 @@ mod tests {
         assert!(contents.contains("-- Auto-generated migration from IR"));
         assert!(contents.contains("-- TestContract/Event1"));
         assert!(contents.contains("CREATE TABLE IF NOT EXISTS testcontract_event1"));
-
-        // Cleanup
-        std::env::set_current_dir(original_dir).unwrap();
+        // Guard automatically restores directory when dropped
     }
 
     #[test]
     fn test_generate_from_ir_with_multiple_contracts() {
         let temp_dir = TempDir::new().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&temp_dir).unwrap();
+        let _guard = WorkingDirGuard::new(&temp_dir);
 
         let config = create_mock_config(vec![
             ("Contract1", vec!["Event1", "Event2"]),
@@ -381,16 +402,13 @@ mod tests {
         assert!(contents.contains("CREATE TABLE IF NOT EXISTS contract1_event1"));
         assert!(contents.contains("CREATE TABLE IF NOT EXISTS contract1_event2"));
         assert!(contents.contains("CREATE TABLE IF NOT EXISTS contract2_event3"));
-
-        // Cleanup
-        std::env::set_current_dir(original_dir).unwrap();
+        // Guard automatically restores directory when dropped
     }
 
     #[test]
     fn test_index_name_uniquification() {
         let temp_dir = TempDir::new().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&temp_dir).unwrap();
+        let _guard = WorkingDirGuard::new(&temp_dir);
 
         let config = create_mock_config(vec![
             ("Contract1", vec!["Event1"]),
@@ -431,16 +449,13 @@ mod tests {
         // Ensure no generic index names that would collide
         assert!(!contents.contains("CREATE INDEX idx_block_number ON"));
         assert!(!contents.contains("CREATE INDEX idx_timestamp ON"));
-
-        // Cleanup
-        std::env::set_current_dir(original_dir).unwrap();
+        // Guard automatically restores directory when dropped
     }
 
     #[test]
     fn test_migration_sql_syntax() {
         let temp_dir = TempDir::new().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&temp_dir).unwrap();
+        let _guard = WorkingDirGuard::new(&temp_dir);
 
         let config = create_mock_config(vec![("TestContract", vec!["TestEvent"])]);
 
@@ -483,16 +498,13 @@ mod tests {
         // Check proper spacing
         assert!(contents.contains("CREATE TABLE IF NOT EXISTS"));
         assert!(contents.contains(" ON "));
-
-        // Cleanup
-        std::env::set_current_dir(original_dir).unwrap();
+        // Guard automatically restores directory when dropped
     }
 
     #[test]
     fn test_migration_filename_format() {
         let temp_dir = TempDir::new().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&temp_dir).unwrap();
+        let _guard = WorkingDirGuard::new(&temp_dir);
 
         let config = create_mock_config(vec![("TestContract", vec!["TestEvent"])]);
 
@@ -528,16 +540,13 @@ mod tests {
 
         // Should contain description
         assert!(filename_str.contains("auto_generated_from_ir"));
-
-        // Cleanup
-        std::env::set_current_dir(original_dir).unwrap();
+        // Guard automatically restores directory when dropped
     }
 
     #[test]
     fn test_generate_from_ir_missing_ir_files() {
         let temp_dir = TempDir::new().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&temp_dir).unwrap();
+        let _guard = WorkingDirGuard::new(&temp_dir);
 
         let config = create_mock_config(vec![("TestContract", vec!["MissingEvent"])]);
 
@@ -545,16 +554,13 @@ mod tests {
         let result = Migration::generate_from_ir(&config);
 
         assert!(result.is_err(), "Should fail when IR files are missing");
-
-        // Cleanup
-        std::env::set_current_dir(original_dir).unwrap();
+        // Guard automatically restores directory when dropped
     }
 
     #[test]
     fn test_migrations_directory_creation() {
         let temp_dir = TempDir::new().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&temp_dir).unwrap();
+        let _guard = WorkingDirGuard::new(&temp_dir);
 
         let config = create_mock_config(vec![("TestContract", vec!["TestEvent"])]);
 
@@ -581,8 +587,6 @@ mod tests {
             Path::new("migrations").is_dir(),
             "Migrations should be a directory"
         );
-
-        // Cleanup
-        std::env::set_current_dir(original_dir).unwrap();
+        // Guard automatically restores directory when dropped
     }
 }

@@ -43,7 +43,7 @@
         "type": "VARCHAR(42) NOT NULL"
       },
       {
-        "name": "swapFeePercentage",
+        "name": "swap_fee_percentage",
         "type": "NUMERIC(78, 0) NOT NULL"
       }
     ],
@@ -89,22 +89,7 @@
       "name": "pool",
       "type": "Option<String>",
       "default": null
-    },
-    {
-      "name": "minSwapFeePercentage",
-      "type": "Option<String>",
-      "default": null
-    },
-    {
-      "name": "maxSwapFeePercentage",
-      "type": "Option<String>",
-      "default": null
-    },
-    {
-      "name": "order",
-      "type": "Option<String>",
-      "default": "asc"
     }
   ],
-  "endpoint_description": "Get time series of PoolUpdated swap fee percentage changes, filterable by pool address, block range, timestamp range, and fee range."
+  "endpoint_description": "Get time series of pool fee updates with optional filtering by pool, block range, and time range"
 }

@@ -59,25 +59,19 @@ pub enum Commands {
     Migrate,
 
     /// Run the indexer (fetch and process events)
+    #[command(hide = true)]
     Index {
         /// Run in daemon mode (continuously index new blocks)
         #[arg(short, long)]
         daemon: bool,
-
-        /// Specific contract to index (optional, defaults to all)
-        #[arg(short, long)]
-        contract: Option<String>,
-
-        /// Specific spec to index (requires --contract)
-        #[arg(short, long)]
-        spec: Option<String>,
     },
 
     /// Start the API server
+    #[command(hide = true)]
     Serve {
-        /// Host to bind to
+        /// IP address to bind to
         #[arg(short, long, default_value = "0.0.0.0")]
-        host: String,
+        address: String,
 
         /// Port to bind to
         #[arg(short, long, default_value = "3000")]
@@ -86,9 +80,9 @@ pub enum Commands {
 
     /// Run both indexer and API server
     Run {
-        /// Host to bind to
+        /// IP address to bind to
         #[arg(short, long, default_value = "0.0.0.0")]
-        host: String,
+        address: String,
 
         /// Port to bind to
         #[arg(short, long, default_value = "3000")]

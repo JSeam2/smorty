@@ -33,7 +33,7 @@
         "type": "INTEGER NOT NULL"
       },
       {
-        "name": "swap_fee_percentage",
+        "name": "swapFeePercentage",
         "type": "NUMERIC(78, 0) NOT NULL"
       }
     ],
@@ -71,6 +71,16 @@
     {
       "name": "endTimestamp",
       "type": "Option<i64>",
+      "default": null
+    },
+    {
+      "name": "minSwapFeePercentage",
+      "type": "Option<String>",
+      "default": null
+    },
+    {
+      "name": "maxSwapFeePercentage",
+      "type": "Option<String>",
       "default": null
     }
   ],
