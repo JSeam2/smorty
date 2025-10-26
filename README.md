@@ -46,7 +46,7 @@ Smorty is a Smart Indexer which allows you to index events on the EVM easily.
 ## Prerequisites
 
 - Rust 1.89+
-- PostgreSQL database
+- PostgreSQL database (or Docker)
 - Archive node RPC endpoints (for historical event indexing)
 - OpenAI API key
 
@@ -120,12 +120,15 @@ Convert the IR into SQLx migrations:
 Make sure to start the database first!
 
 ```bash
-docker compose up
+docker compose up -d
+
+# To shutdown the db instance, data will be persisted in ./pg_data
+docker compose down
 ```
 
 Run the migrations
 ```bash
-smorty gen-migration
+smorty gen-migrations
 ```
 
 This creates timestamped migration files in [migrations/](migrations/) with:
@@ -212,8 +215,4 @@ curl http://localhost:3000/api/your-event?limit=50&offset=100
 - [ ] API server with auto-generated endpoints
 - [ ] Swagger/OpenAPI documentation
 - [ ] WebSocket support for real-time updates
-- [ ] Local LLM support
-
-## License
-
-MIT
+- [ ] Other LLM support
