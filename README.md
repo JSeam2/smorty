@@ -1,51 +1,219 @@
-# Smorty 🤔
+# Smorty 😎
+
+```
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣿⠟⠻⣦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣼⣿⠀⠀⠈⠻⣦⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣴⣶⣦⡀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡿⡇⠀⠀⠀⠀⠈⠙⢷⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣤⠾⠋⠁⢸⣿⡇⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣇⡇⠀⠀⠀⠀⠀⠀⠀⠙⢷⣆⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣤⡾⠛⠁⠀⠀⠀⣿⣼⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⡏⣷⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢿⣦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣤⡾⠛⠁⠀⠀⠀⠀⠀⣸⡿⣿⠂⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣇⣿⠀⠀⠀⠀⠀⠶⠶⠶⠶⠶⠶⠿⠷⠶⠶⠤⣤⣤⣀⣀⡀⢀⣤⡾⠛⠁⠀⠀⠀⠀⠀⠀⠀⢠⣿⢣⡟⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⣽⠟⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣼⡷⣸⠇⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⢣⡿⠁⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⣼⠃⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣸⠇⠀⣀⣀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⡏⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⣀⣤⣿⣿⡾⠛⠉⣉⣽⣿⣶⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣴⠶⠛⢛⣿⣿⣷⣶⣤⣀⠀⠀⠀⠀⠀⠀⢸⣿⡀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⢰⣾⠛⢉⣵⡟⣃⣤⣶⣿⣿⣿⣿⣿⣿⣷⡄⠀⠀⠀⠀⠀⣠⣾⠏⣡⣴⣾⣿⣿⣿⣿⣿⣿⣿⣷⡄⠀⠀⠀⠀⢈⡹⣇⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠙⣷⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣀⣀⣀⣀⣰⣿⣷⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣦⠶⠖⠲⠾⣿⣿⣦⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⣠⣴⡾⠋⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠟⠛⠻⠿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠟⠀⠀⠀⠀⠀⠈⠙⢿⣄⠀⠀⠀⠀
+⠀⠀⣿⡛⠉⠁⠀⠀⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡏⠀⠀⠀⠀⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢷⣄⠀⠀
+⠀⠀⣾⣷⣦⣀⠀⠀⠈⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠏⠀⠀⠀⠀⠀⠘⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠻⣧⠀
+⠀⡀⠈⠻⢿⣿⣿⣷⠆⠀⠙⠻⠿⣿⣿⡿⢿⣿⠋⠀⠀⠀⣴⠇⠀⠀⠀⠈⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⢿⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢹⡆
+⠀⠻⣟⠛⠛⠛⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠿⣿⣆⣀⣠⣼⢿⣧⠀⠀⠀⢀⣿⠿⢿⣿⣿⣿⣿⣿⣿⣿⠿⣛⠹⣮⣿⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⣷
+⠀⠀⠈⠻⢦⣤⣀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠛⢩⠿⠻⣯⢻⣷⣶⣿⡿⠋⠀⠀⠀⠉⠉⠉⠉⠁⠀⣐⣭⣾⡿⠋⢻⣧⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿
+⠀⠀⠀⢀⣰⣿⣻⡏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣴⡿⠛⣍⠡⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⡟
+⠀⠀⠀⠛⣿⣿⠟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣤⡾⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⡿⠁
+⠀⠀⠀⢐⣿⡿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣴⠟⠀⠀
+⠀⠀⠀⣼⣿⠇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⡾⠃⠀⠀⠀
+⠀⠀⠀⣸⡟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣶⡟⠀⠀⠀⠀⠀
+⠀⠀⣰⣿⡆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⠛⠀⠀⠀⠀⠀⠀
+⢠⣾⢿⡿⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣸⡏⠀⠀⠀⠀⠀⠀⠀
+⠀⣰⡟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣶⣿⠀⠀⠀⠀⠀⠀⠀⠀
+⣾⢿⣾⠇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⠛⠀⠀⠀⠀⠀⠀⠀⠀
+⢀⣾⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢿⠀⠀⠀⠀⠀⠀⠀⠀⠀
+```
 
 Smorty is a Smart Indexer which allows you to index events on the EVM easily.
 
-## How it works
-1. Copy `config.yaml.example` to `config.yaml`
+## Features
 
-2. Fill in the chains
-```yaml
-# RPC endpoints keyed by EVM chain id
-chains:
-  mainnet: "REPLACE_WITH_YOUR_MAINNET_RPC_URL"
-  sonic: "REPLACE_WITH_YOUR_SONIC_RPC_URL"
+- **AI-Powered**: Uses OpenAI to analyze contract ABIs and natural language descriptions to generate indexing logic
+- **Automatic Schema Generation**: Generates PostgreSQL schemas with proper type mappings for all Solidity types
+- **Auto-Generated APIs**: REST endpoints with automatic filtering based on indexed fields
+- **Swagger Documentation**: Auto-generated OpenAPI docs via utoipa
+- **Built with Modern Stack**: Rust + Alloy (Ethereum) + Axum (web framework) + SQLx (database)
+
+## Prerequisites
+
+- Rust 1.89+
+- PostgreSQL database
+- Archive node RPC endpoints (for historical event indexing)
+- OpenAI API key
+
+## Quick Start
+
+### 1. Setup Configuration
+
+Copy the example config:
+```bash
+cp config.toml.example config.toml
 ```
 
-3. Specify AI provider to use. OpenAI supported atm
-```yaml
-# External AI provider, TODO: support local LLMs
-ai:
-  openai:
-    model: "gpt-5-2025-08-07"
-    apiKey: "REPLACE_WITH_YOUR_OPENAI_API_KEY"
-    temperature: 0.0
+Edit [config.toml](config.toml) and fill in your values:
+
+```toml
+# Database connection
+[database]
+uri = "postgresql://user:password@localhost:5432/smorty"
+
+# RPC endpoints (use archive nodes!)
+[chains]
+mainnet = "YOUR_MAINNET_RPC_URL"
+sonic = "YOUR_SONIC_RPC_URL"
+
+# AI provider
+[ai.openai]
+model = "gpt-4"
+apiKey = "YOUR_OPENAI_API_KEY"
+temperature = 0.0
+
+# Contract specifications
+[contracts.YourContract]
+chain = "sonic"
+address = "0x..."
+abiPath = "abi/YourContract.json"
+
+[[contracts.YourContract.specs]]
+name = "YourEvent"
+startBlock = 1000000
+endpoint = "/api/your-event"
+task = """
+1. Track event YourEvent(uint256 value, address indexed user).
+2. Persist value and user fields with block metadata.
+3. Allow filtering by block range and timestamp.
+"""
 ```
 
-4. Write your specifications.
-```yaml
-# Define contracts and specifications
-contracts:
-  FeeManagerV3_Beets_Sonic_ETHUSD6h:
-    chain: sonic
-    address: "0x3295c142F1D0A2627A8a02Caedb1C5739A68Dd30"
-    abiPath: "abi/FeeManagerV3_Beets.json"
-
-    specs:
-      - name: FeeUpdated
-        startBlock: 47463429
-        endpoint: "/sonic/FeeManagerV3Beets-Sonic-ETHUSD6h/FeeUpdated"
-        task: |
-          1. Track event FeeUpdated(uint256 swapFeePercentage).
-          2. Persist the swapFeePercentage field along with the blockNumber and timestamp to return a time series of fee updates.
-          3. Allow a user to specify limit, offset, startBlockNumber, endBlockNumber, startTimestamp, endTimestamp as query parameters to filter the results.
-
-      - name: PoolUpdated
-        startBlock: 47463429
-        endpoint: "/sonic/FeeManagerV3Beets_Sonic_ETHUSD6h/PoolUpdated"
-        task: |
-          1. Track event PoolUpdated(address indexed pool, uint256 swapFeePercentage).
-          2. Persist the swapFeePercentage field along with the blockNumber and timestamp to return a time series of fee updates.
-          3. Allow a user to specify limit, offset, startBlockNumber, endBlockNumber, startTimestamp, endTimestamp as query parameters to filter the results.
+Install smorty
+```bash
+cargo install --path .
 ```
+
+### 2. Generate IR (Intermediate Representation)
+
+This uses AI to analyze your contract ABIs and tasks to generate indexing instructions:
+
+```bash
+smorty gen-ir
+```
+
+This creates JSON files in the [ir/](ir/) directory with:
+- Event signatures and parameters
+- Database schema definitions
+- Query parameter specifications
+- API endpoint metadata
+
+### 3. Generate Database Migrations
+
+Convert the IR into SQLx migrations:
+
+Make sure to start the database first!
+
+```bash
+docker compose up
+```
+
+Run the migrations
+```bash
+smorty gen-migration
+```
+
+This creates timestamped migration files in [migrations/](migrations/) with:
+- CREATE TABLE statements with proper column types
+- Indexes for efficient querying
+
+**NOTE**: For consistency and simplicity, rollbacks are not allowed, this is to prevent state mismatches between the database and IR.
+
+### 4. Run Migrations
+
+Apply the migrations to your database:
+
+```bash
+smorty migrate
+```
+
+### 5. Run the Indexer
+
+Start indexing blockchain events:
+
+```bash
+smorty run --port 3000 --host 0.0.0.0
+```
+
+## Project Structure
+
+```
+.
+├── config.toml          # Configuration file
+├── abi/                 # Contract ABI JSON files
+├── ir/                  # Generated intermediate representation
+├── migrations/          # SQLx database migrations
+└── src/
+    ├── main.rs          # CLI entry point
+    ├── config.rs        # Config parsing
+    ├── ai.rs            # OpenAI integration
+    ├── ir_generator.rs  # IR generation from config
+    └── migration_generator.rs  # Migration generation from IR
+```
+
+## Type Mappings
+
+Smorty automatically maps Solidity types to PostgreSQL types:
+
+| Solidity | PostgreSQL |
+|----------|------------|
+| uint8 | SMALLINT |
+| uint16-uint32 | INTEGER/BIGINT |
+| uint64 and smaller | BIGINT |
+| uint128 and smaller | NUMERIC(39, 0) |
+| uint256 | NUMERIC(78, 0) |
+| address | VARCHAR(42) |
+| bytes32 | VARCHAR(66) |
+| bytes | TEXT |
+| string | TEXT |
+| bool | BOOLEAN |
+
+## Example Query
+
+Once your indexer is running, you can query the API:
+
+```bash
+# Get latest events
+curl http://localhost:3000/api/your-event?limit=10
+
+# Filter by block range
+curl http://localhost:3000/api/your-event?startBlockNumber=1000000&endBlockNumber=2000000
+
+# Filter by timestamp
+curl http://localhost:3000/api/your-event?startTimestamp=1640000000&endTimestamp=1650000000
+
+# Pagination
+curl http://localhost:3000/api/your-event?limit=50&offset=100
+```
+
+## Development Status
+
+- [x] Config parsing (TOML)
+- [x] AI integration (OpenAI)
+- [x] IR generation
+- [x] Migration generation
+- [x] CLI framework
+- [ ] Event indexer engine
+- [ ] API server with auto-generated endpoints
+- [ ] Swagger/OpenAPI documentation
+- [ ] WebSocket support for real-time updates
+- [ ] Local LLM support
+
+## License
+
+MIT

@@ -1,0 +1,40 @@
+# Database connection URL
+[database]
+uri = "postgresql://postgres:postgres@localhost:5432/smorty"
+
+# chain RPC, make sure to use an archive node!
+[chains]
+mainnet   = "TODO"
+sonic     = "TODO"
+
+# External AI provider, TODO: support local LLMs
+[ai.openai]
+model = "gpt-5-2025-08-07"
+apiKey = "TODO"
+temperature = 0.0
+
+# specifications
+[contracts.FeeManagerV3_Beets_Sonic_ETHUSD6h]
+chain = "sonic"
+address = "0x3295c142F1D0A2627A8a02Caedb1C5739A68Dd30"
+abiPath = "abi/FeeManagerV3_Beets.json"
+
+[[contracts.FeeManagerV3_Beets_Sonic_ETHUSD6h.specs]]
+name = "FeeUpdated"
+startBlock = 47463429
+endpoint = "/sonic/FeeManagerV3Beets-Sonic-ETHUSD6h/FeeUpdated"
+task = """
+1. Track event FeeUpdated(uint256 swapFeePercentage).
+2. Persist swapFeePercentage with blockNumber and timestamp for a time series.
+3. Allow limit, offset, startBlockNumber, endBlockNumber, startTimestamp, endTimestamp filters.
+"""
+
+[[contracts.FeeManagerV3_Beets_Sonic_ETHUSD6h.specs]]
+name = "PoolUpdated"
+startBlock = 47463429
+endpoint = "/sonic/FeeManagerV3Beets_Sonic_ETHUSD6h/PoolUpdated"
+task = """
+1. Track event PoolUpdated(address indexed pool, uint256 swapFeePercentage).
+2. Persist swapFeePercentage with blockNumber and timestamp for a time series.
+3. Same query filters as above.
+"""

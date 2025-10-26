@@ -1,2 +1,8 @@
 /target
 config.yaml
+abi/*
+!abi/.gitkeep
+migrations/*
+!migrations/.gitkeep
+ir/*
+!ir/.gitkeep
