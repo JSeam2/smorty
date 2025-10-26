@@ -94,6 +94,8 @@ task = """
 """
 ```
 
+Copy your abi into `abi` you may delete `./abi/FeeManagerV3_Beets.json` and `./ir/FeeManagerV3_Beets_Sonic_ETHUSD6h` as these these are for testing.
+
 Install smorty
 ```bash
 cargo install --path .
@@ -151,6 +153,12 @@ Start indexing blockchain events:
 
 ```bash
 smorty run --port 3000 --host 0.0.0.0
+```
+
+### 6. Run Unittests
+
+```bash
+cargo test -- --test-threads=1
 ```
 
 ## Project Structure

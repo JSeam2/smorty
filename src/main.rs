@@ -1,16 +1,10 @@
-mod ai;
-mod cli;
-mod config;
-mod ir;
-mod migration;
-
-use ai::AiClient;
 use anyhow::{Context, Result};
 use clap::Parser;
-use cli::{Cli, Commands};
-use config::Config;
-use ir::Ir;
-use migration::Migration;
+use smorty::ai::AiClient;
+use smorty::cli::{Cli, Commands};
+use smorty::config::Config;
+use smorty::ir::Ir;
+use smorty::migration::Migration;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
@@ -84,7 +78,7 @@ async fn gen_ir(config: &Config, _force: bool) -> Result<()> {
 fn gen_migration(config: &Config) -> Result<()> {
     tracing::info!("Generating migration from IR");
 
-    migration::Migration::generate_from_ir(config)?;
+    Migration::generate_from_ir(config)?;
 
     tracing::info!("Migration generation complete");
 

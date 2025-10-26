@@ -106,6 +106,9 @@ mod tests {
     #[test]
     fn test_config_parsing() {
         let toml_str = r#"
+[database]
+uri = "postgresql://test:test@localhost:5432/test"
+
 [chains]
 mainnet = "https://mainnet.example.com"
 sonic = "https://sonic.example.com"

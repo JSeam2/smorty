@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.89"
 
+[lib]
+name = "smorty"
+path = "src/lib.rs"
+
 [[bin]]
 name = "smorty"
 path = "src/main.rs"
@@ -56,3 +60,6 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 dotenv = "0.15"
 chrono = { version = "0.4", features = ["serde"] }
 hex = "0.4"
+
+[dev-dependencies]
+tempfile = "3.15"
