@@ -2,6 +2,7 @@
 config.toml
 abi/*
 !abi/.gitkeep
+!abi/FeeManagerV3_Beets.json
 migrations/*
 !migrations/.gitkeep
 ir/*
