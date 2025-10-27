@@ -58,4 +58,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:3000/health || exit 1
 
 # Default command - can be overridden in docker-compose or k8s
-CMD ["smorty", "serve"]
+CMD ["smorty", "run"]
