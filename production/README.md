@@ -123,19 +123,19 @@ mkdir -p ir/specs ir/endpoints migrations
 
 ```bash
 cd production
-docker compose -f docker compose-prod.yaml up -d postgres
+docker compose -f docker-compose-prod.yaml up -d postgres
 ```
 
 Wait for PostgreSQL to be healthy:
 ```bash
-docker compose -f docker compose-prod.yaml ps postgres
+docker compose -f docker-compose-prod.yaml ps postgres
 # Wait until status shows "healthy"
 ```
 
 #### Step 3: Build Application Image
 
 ```bash
-docker compose -f docker compose-prod.yaml build smorty-app
+docker compose -f docker-compose-prod.yaml build smorty-app
 ```
 
 #### Step 4: Run Smorty Bootstrap Commands
@@ -144,16 +144,16 @@ Run the bootstrap commands in sequence. The generated files will be written to y
 
 ```bash
 # Generate specifications from config.toml
-docker compose -f docker compose-prod.yaml run --rm smorty-app smorty gen-spec
+docker compose -f docker-compose-prod.yaml run --rm smorty-app smorty gen-spec
 
 # Generate migrations based on specs
-docker compose -f docker compose-prod.yaml run --rm smorty-app smorty gen-migration
+docker compose -f docker-compose-prod.yaml run --rm smorty-app smorty gen-migration
 
 # Apply migrations to database
-docker compose -f docker compose-prod.yaml run --rm smorty-app smorty migrate
+docker compose -f docker-compose-prod.yaml run --rm smorty-app smorty migrate
 
 # Generate API endpoints
-docker compose -f docker compose-prod.yaml run --rm smorty-app smorty gen-endpoint
+docker compose -f docker-compose-prod.yaml run --rm smorty-app smorty gen-endpoint
 ```
 
 After running these commands, you should see:
@@ -175,7 +175,7 @@ Now that bootstrapping is complete, start all services:
 
 ```bash
 cd production
-docker compose -f docker compose-prod.yaml up -d
+docker compose -f docker-compose-prod.yaml up -d
 ```
 
 This will start the application and nginx, which will use the already-running database and the generated files.
@@ -204,7 +204,7 @@ docker compose -f docker-compose-prod.yaml run --rm smorty-app smorty migrate
 docker compose -f docker-compose-prod.yaml run --rm smorty-app smorty gen-endpoint
 
 # Restart the application to pick up changes
-docker compose -f docker compose-prod.yaml restart smorty-app
+docker compose -f docker-compose-prod.yaml restart smorty-app
 ```
 
 ## Management Commands
@@ -224,19 +224,19 @@ docker compose -f docker-compose-prod.yaml logs -f nginx
 ### Stop Services
 
 ```bash
-docker compose -f docker compose-prod.yaml down
+docker compose -f docker-compose-prod.yaml down
 ```
 
 ### Restart Services
 
 ```bash
-docker compose -f docker compose-prod.yaml restart
+docker compose -f docker-compose-prod.yaml restart
 ```
 
 ### Rebuild Application
 
 ```bash
-docker compose -f docker compose-prod.yaml up -d --build smorty-app
+docker compose -f docker-compose-prod.yaml up -d --build smorty-app
 ```
 
 ### Database Backup
@@ -362,7 +362,7 @@ spec:
 ### Container Health
 
 ```bash
-docker compose -f docker compose-prod.yaml ps
+docker compose -f docker-compose-prod.yaml ps
 ```
 
 ### Resource Usage
@@ -389,7 +389,7 @@ tail -f nginx/logs/error.log
 
 ```bash
 # Check logs
-docker compose -f docker compose-prod.yaml logs smorty-app
+docker compose -f docker-compose-prod.yaml logs smorty-app
 
 # Check database connectivity
 docker exec smorty-app ping postgres
@@ -399,10 +399,10 @@ docker exec smorty-app ping postgres
 
 ```bash
 # Check postgres is healthy
-docker compose -f docker compose-prod.yaml ps postgres
+docker compose -f docker-compose-prod.yaml ps postgres
 
 # Check database logs
-docker compose -f docker compose-prod.yaml logs postgres
+docker compose -f docker-compose-prod.yaml logs postgres
 
 # Test connection
 docker exec -it smorty-postgres psql -U postgres -d smorty
@@ -422,7 +422,7 @@ openssl s_client -connect yourdomain.com:443
 
 ### PostgreSQL
 
-Edit `docker compose-prod.yaml` to add PostgreSQL performance settings:
+Edit `docker-compose-prod.yaml` to add PostgreSQL performance settings:
 
 ```yaml
 postgres:
@@ -445,7 +445,7 @@ Adjust worker processes in `nginx/nginx.conf` based on your CPU cores.
 For horizontal scaling:
 
 ```bash
-docker compose -f docker compose-prod.yaml up -d --scale smorty-app=3
+docker compose -f docker-compose-prod.yaml up -d --scale smorty-app=3
 ```
 
 Note: You'll need to configure nginx upstream load balancing for multiple app instances.
@@ -456,8 +456,8 @@ Note: You'll need to configure nginx upstream load balancing for multiple app in
 
 ```bash
 cd production
-docker compose -f docker compose-prod.yaml pull
-docker compose -f docker compose-prod.yaml up -d --build
+docker compose -f docker-compose-prod.yaml pull
+docker compose -f docker-compose-prod.yaml up -d --build
 ```
 
 ### Clean Up
