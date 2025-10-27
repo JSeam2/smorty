@@ -44,7 +44,7 @@ services:
       SERVER_PORT: 3000
     volumes:
       # Mount config and ABI files
-      - ../config.toml:/app/config/config.toml:ro
+      - ../config.toml:/app/config.toml:ro
       - ../abi:/app/abi:ro
 
       # Mount generated files directories for persistence and version control
