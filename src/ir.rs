@@ -1,5 +1,5 @@
-use crate::ai::{AiClient, IrGenerationResult};
-use crate::config::{Config, ContractConfig, SpecConfig};
+use crate::ai::{AiClient, EndpointIrResult, IrGenerationResult};
+use crate::config::{Config, ContractConfig, EndpointConfig, SpecConfig};
 use anyhow::{Context, Result};
 use serde_json::Value;
 use std::fs;
@@ -47,8 +47,8 @@ impl Ir {
             tracing::info!("  Generating spec: {}", spec.name);
             let ir = self.generate_spec(contract_name, &contract_config, spec, &abi).await?;
 
-            // Save IR to file
-            self.save_ir(contract_name, spec, &ir)?;
+            // Save spec IR to file
+            self.save_ir_spec(contract_name, spec, &ir)?;
         }
 
         Ok(())
@@ -71,8 +71,7 @@ impl Ir {
                 contract.address.as_str(),
                 contract.chain.as_str(),
                 abi,
-                &spec.task,
-                &spec.endpoint,
+                &spec.task
             )
             .await
             .context(format!("Failed to generate IR for spec: {}", spec.name))?;
@@ -80,18 +79,18 @@ impl Ir {
         Ok(ir)
     }
 
-    /// Save IR to file in the ir/ directory
-    fn save_ir(
+    /// Save spec IR to file in the ir/specs/ directory
+    fn save_ir_spec(
         &self,
         contract_name: &str,
         spec: &SpecConfig,
         ir: &IrGenerationResult,
     ) -> Result<()> {
-        self.save_ir_to_dir(Path::new("ir"), contract_name, spec, ir)
+        self.save_ir_spec_to_dir(Path::new("ir/specs"), contract_name, spec, ir)
     }
 
-    /// Save IR to a specific directory (used for testing)
-    fn save_ir_to_dir(
+    /// Save spec IR to a specific directory (used for testing)
+    fn save_ir_spec_to_dir(
         &self,
         base_dir: &Path,
         contract_name: &str,
@@ -123,9 +122,9 @@ impl Ir {
         Ok(())
     }
 
-    /// Load IR from file
-    pub fn load_ir(contract_name: &str, spec_name: &str) -> Result<IrGenerationResult> {
-        let ir_file = Path::new("ir")
+    /// Load spec IR from file in the ir/specs/ directory
+    pub fn load_ir_spec(contract_name: &str, spec_name: &str) -> Result<IrGenerationResult> {
+        let ir_file = Path::new("ir/specs")
             .join(contract_name)
             .join(format!("{}.json", spec_name));
 
@@ -138,14 +137,144 @@ impl Ir {
         Ok(ir)
     }
 
-    /// Load all IR files
-    pub fn load_all_ir(config: &Config) -> Result<Vec<(String, String, IrGenerationResult)>> {
+    /// Load all spec IR files
+    pub fn load_all_ir_specs(config: &Config) -> Result<Vec<(String, String, IrGenerationResult)>> {
         let mut results = Vec::new();
 
         for (contract_name, contract_config) in &config.contracts {
             for spec in &contract_config.specs {
-                let ir = Self::load_ir(contract_name, &spec.name)?;
+                let ir = Self::load_ir_spec(contract_name, &spec.name)?;
                 results.push((contract_name.clone(), spec.name.clone(), ir));
+            }
+        }
+
+        Ok(results)
+    }
+
+    /// Generate IR for all endpoints in the config
+    pub async fn generate_all_endpoints(&self, config: &Config) -> Result<()> {
+        tracing::info!("Starting endpoint IR generation");
+
+        // First, load all spec IR to provide context to the endpoint generator
+        let spec_irs = Self::load_all_ir_specs(config)?;
+        let spec_irs_ref: Vec<_> = spec_irs.iter().map(|(_, _, ir)| ir.clone()).collect();
+
+        for (index, endpoint_config) in config.endpoints.iter().enumerate() {
+            tracing::info!(
+                "Generating endpoint IR {}/{}: {}",
+                index + 1,
+                config.endpoints.len(),
+                endpoint_config.endpoint
+            );
+            self.generate_endpoint(&endpoint_config, &spec_irs_ref)
+                .await?;
+        }
+
+        tracing::info!("Endpoint IR generation complete");
+        Ok(())
+    }
+
+    /// Generate IR for a single endpoint
+    async fn generate_endpoint(
+        &self,
+        endpoint_config: &EndpointConfig,
+        available_tables: &[IrGenerationResult],
+    ) -> Result<()> {
+        let endpoint_ir = self
+            .ai_client
+            .generate_endpoint_ir(
+                &endpoint_config.endpoint,
+                &endpoint_config.description,
+                &endpoint_config.task,
+                available_tables,
+            )
+            .await
+            .context(format!(
+                "Failed to generate endpoint IR for: {}",
+                endpoint_config.endpoint
+            ))?;
+
+        // Save endpoint IR to file
+        self.save_ir_endpoint(&endpoint_ir)?;
+
+        Ok(())
+    }
+
+    /// Save endpoint IR to file in the ir/endpoints/ directory
+    fn save_ir_endpoint(&self, ir: &EndpointIrResult) -> Result<()> {
+        self.save_ir_endpoint_to_dir(Path::new("ir/endpoints"), ir)
+    }
+
+    /// Save endpoint IR to a specific directory (used for testing)
+    fn save_ir_endpoint_to_dir(&self, base_dir: &Path, ir: &EndpointIrResult) -> Result<()> {
+        // Create ir/endpoints directory if it doesn't exist
+        if !base_dir.exists() {
+            fs::create_dir_all(base_dir).context("Failed to create ir/endpoints directory")?;
+        }
+
+        // Convert endpoint path to filename
+        // e.g., "/api/pool/{pool}/fees" -> "api_pool_fees"
+        let filename = ir
+            .endpoint_path
+            .trim_start_matches('/')
+            .replace('/', "_")
+            .replace('{', "")
+            .replace('}', "");
+
+        // Save IR as JSON
+        let ir_file = base_dir.join(format!("{}.json", filename));
+        let ir_json = serde_json::to_string_pretty(ir).context("Failed to serialize endpoint IR")?;
+
+        fs::write(&ir_file, ir_json)
+            .context(format!("Failed to write endpoint IR file: {:?}", ir_file))?;
+
+        tracing::info!("  Saved endpoint IR to: {:?}", ir_file);
+
+        Ok(())
+    }
+
+    /// Load endpoint IR from file in the ir/endpoints/ directory
+    pub fn load_ir_endpoint(endpoint_path: &str) -> Result<EndpointIrResult> {
+        // Convert endpoint path to filename
+        let filename = endpoint_path
+            .trim_start_matches('/')
+            .replace('/', "_")
+            .replace('{', "")
+            .replace('}', "");
+
+        let ir_file = Path::new("ir/endpoints").join(format!("{}.json", filename));
+
+        let ir_content = fs::read_to_string(&ir_file)
+            .context(format!("Failed to read endpoint IR file: {:?}", ir_file))?;
+
+        let ir: EndpointIrResult =
+            serde_json::from_str(&ir_content).context("Failed to parse endpoint IR JSON")?;
+
+        Ok(ir)
+    }
+
+    /// Load all endpoint IR files
+    pub fn load_all_ir_endpoints() -> Result<Vec<EndpointIrResult>> {
+        let endpoints_dir = Path::new("ir/endpoints");
+
+        if !endpoints_dir.exists() {
+            return Ok(Vec::new());
+        }
+
+        let mut results = Vec::new();
+
+        for entry in fs::read_dir(endpoints_dir)? {
+            let entry = entry?;
+            let path = entry.path();
+
+            if path.extension().and_then(|s| s.to_str()) == Some("json") {
+                let ir_content = fs::read_to_string(&path)
+                    .context(format!("Failed to read endpoint IR file: {:?}", path))?;
+
+                let ir: EndpointIrResult =
+                    serde_json::from_str(&ir_content).context("Failed to parse endpoint IR JSON")?;
+
+                results.push(ir);
             }
         }
 
@@ -156,7 +285,7 @@ impl Ir {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ai::{ColumnDef, EventField, QueryParam, TableSchema};
+    use crate::ai::{ColumnDef, EventField, TableSchema};
     use tempfile::TempDir;
 
     // NOTE: These tests use temporary directories to avoid interfering with the actual ir/ directory
@@ -169,7 +298,6 @@ mod tests {
             start_block: 12345678,
             contract_address: "0x1234567890123456789012345678901234567890".to_string(),
             chain: "ethereum".to_string(),
-            endpoint: "/test/events".to_string(),
             indexed_fields: vec![
                 EventField {
                     name: "amount".to_string(),
@@ -208,19 +336,7 @@ mod tests {
                     "CREATE INDEX idx_block_number ON {table_name}(block_number)".to_string(),
                 ],
             },
-            query_params: vec![
-                QueryParam {
-                    name: "limit".to_string(),
-                    param_type: "u64".to_string(),
-                    default: Some(serde_json::json!("100")),
-                },
-                QueryParam {
-                    name: "offset".to_string(),
-                    param_type: "u64".to_string(),
-                    default: Some(serde_json::json!("0")),
-                },
-            ],
-            endpoint_description: "Get test events".to_string(),
+            description: "Get test events".to_string(),
         }
     }
 
@@ -238,7 +354,6 @@ mod tests {
         SpecConfig {
             name: name.to_string(),
             start_block: Some(0),
-            endpoint: format!("/test/{}", name),
             task: "Test task".to_string(),
         }
     }
@@ -258,9 +373,9 @@ mod tests {
         let spec = create_mock_spec("TestEvent");
         let mock_ir = create_mock_ir();
 
-        // Test save_ir_to_dir
+        // Test save_ir_spec_to_dir
         ir_generator
-            .save_ir_to_dir(&ir_dir, contract_name, &spec, &mock_ir)
+            .save_ir_spec_to_dir(&ir_dir, contract_name, &spec, &mock_ir)
             .expect("Failed to save IR");
 
         // Verify file was created
@@ -280,7 +395,6 @@ mod tests {
         assert_eq!(loaded_ir.start_block, mock_ir.start_block);
         assert_eq!(loaded_ir.contract_address, mock_ir.contract_address);
         assert_eq!(loaded_ir.chain, mock_ir.chain);
-        assert_eq!(loaded_ir.endpoint, mock_ir.endpoint);
         assert_eq!(loaded_ir.indexed_fields.len(), mock_ir.indexed_fields.len());
         assert_eq!(
             loaded_ir.table_schema.table_name,
@@ -291,22 +405,22 @@ mod tests {
             mock_ir.table_schema.columns.len()
         );
         assert_eq!(
-            loaded_ir.endpoint_description,
-            mock_ir.endpoint_description
+            loaded_ir.description,
+            mock_ir.description
         );
     }
 
     #[test]
-    fn test_load_ir_nonexistent_file() {
+    fn test_load_ir_spec_nonexistent_file() {
         // Try to load non-existent IR
-        let result = Ir::load_ir("NonExistentContract", "NonExistentSpec");
+        let result = Ir::load_ir_spec("NonExistentContract", "NonExistentSpec");
 
         // Should return an error
         assert!(result.is_err(), "Should fail when loading non-existent IR");
     }
 
     #[test]
-    fn test_load_all_ir() {
+    fn test_load_all_ir_specs() {
         let temp_dir = TempDir::new().unwrap();
         let ir_dir = temp_dir.path().join("ir");
 
@@ -326,7 +440,7 @@ mod tests {
                 let mut mock_ir = create_mock_ir();
                 mock_ir.event_name = spec_name.to_string();
                 ir_generator
-                    .save_ir_to_dir(&ir_dir, contract_name, &spec, &mock_ir)
+                    .save_ir_spec_to_dir(&ir_dir, contract_name, &spec, &mock_ir)
                     .expect("Failed to save IR");
             }
         }
@@ -349,7 +463,7 @@ mod tests {
     }
 
     #[test]
-    fn test_save_ir_creates_directories() {
+    fn test_save_ir_spec_creates_directories() {
         let temp_dir = TempDir::new().unwrap();
         let ir_dir = temp_dir.path().join("ir");
 
@@ -363,7 +477,7 @@ mod tests {
 
         // Save IR (should create directories if they don't exist)
         ir_generator
-            .save_ir_to_dir(&ir_dir, contract_name, &spec, &mock_ir)
+            .save_ir_spec_to_dir(&ir_dir, contract_name, &spec, &mock_ir)
             .expect("Failed to save IR");
 
         // Verify directories were created
@@ -388,7 +502,7 @@ mod tests {
 
         // Save
         ir_generator
-            .save_ir_to_dir(&ir_dir, contract_name, &spec, &original_ir)
+            .save_ir_spec_to_dir(&ir_dir, contract_name, &spec, &original_ir)
             .expect("Failed to save IR");
 
         // Load
@@ -405,7 +519,6 @@ mod tests {
         assert_eq!(loaded_ir.start_block, original_ir.start_block);
         assert_eq!(loaded_ir.contract_address, original_ir.contract_address);
         assert_eq!(loaded_ir.chain, original_ir.chain);
-        assert_eq!(loaded_ir.endpoint, original_ir.endpoint);
 
         // Check indexed fields
         for (loaded_field, original_field) in loaded_ir

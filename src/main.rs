@@ -3,8 +3,10 @@ use clap::Parser;
 use smorty::ai::AiClient;
 use smorty::cli::{Cli, Commands};
 use smorty::config::Config;
+use smorty::indexer::Indexer;
 use smorty::ir::Ir;
 use smorty::migration::Migration;
+use smorty::server;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
@@ -29,8 +31,11 @@ async fn main() -> Result<()> {
 
     // Handle commands
     match cli.command {
-        Commands::GenIr { force } => {
-            gen_ir(&config, force).await?;
+        Commands::GenSpec => {
+            gen_spec(&config).await?;
+        }
+        Commands::GenEndpoint => {
+            gen_endpoint(&config).await?;
         }
         Commands::GenMigration => {
             gen_migration(&config)?;
@@ -52,8 +57,8 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn gen_ir(config: &Config, _force: bool) -> Result<()> {
-    tracing::info!("Starting IR generation");
+async fn gen_spec(config: &Config) -> Result<()> {
+    tracing::info!("Starting spec IR generation");
 
     // Create AI client
     let ai_client = AiClient::new(
@@ -62,11 +67,30 @@ async fn gen_ir(config: &Config, _force: bool) -> Result<()> {
         config.ai.openai.temperature,
     );
 
-    // Generate IR
+    // Generate spec IR
     let ir_generator = Ir::new(ai_client);
     ir_generator.generate_all(config).await?;
 
-    tracing::info!("IR generation complete");
+    tracing::info!("Spec IR generation complete");
+
+    Ok(())
+}
+
+async fn gen_endpoint(config: &Config) -> Result<()> {
+    tracing::info!("Starting endpoint IR generation");
+
+    // Create AI client
+    let ai_client = AiClient::new(
+        config.ai.openai.api_key.clone(),
+        config.ai.openai.model.clone(),
+        config.ai.openai.temperature,
+    );
+
+    // Generate endpoint IR
+    let ir_generator = Ir::new(ai_client);
+    ir_generator.generate_all_endpoints(config).await?;
+
+    tracing::info!("Endpoint IR generation complete");
 
     Ok(())
 }
@@ -91,26 +115,46 @@ async fn migrate(config: &Config) -> Result<()> {
     Ok(())
 }
 
-async fn index(
-    _config: &Config,
-    _daemon: bool,
-) -> Result<()> {
+async fn index(config: &Config, daemon: bool) -> Result<()> {
     tracing::info!("Starting indexer");
-    tracing::warn!("Indexer not yet implemented");
-    // TODO: Implement indexer
+
+    // Create indexer instance
+    let indexer = Indexer::new(config).await?;
+
+    // Start indexing
+    indexer.start(daemon).await?;
+
+    tracing::info!("Indexer finished");
     Ok(())
 }
 
-async fn serve(_config: &Config, address: &str, port: u16) -> Result<()> {
-    tracing::info!("Starting API server on {}:{}", address, port);
-    tracing::warn!("API server not yet implemented");
-    // TODO: Implement API server
-    Ok(())
+async fn serve(config: &Config, address: &str, port: u16) -> Result<()> {
+    server::serve(config, address, port).await
 }
 
-async fn run(_config: &Config, address: &str, port: u16) -> Result<()> {
+async fn run(config: &Config, address: &str, port: u16) -> Result<()> {
     tracing::info!("Starting indexer and API server on {}:{}", address, port);
-    tracing::warn!("Combined mode not yet implemented");
-    // TODO: Implement combined mode
-    Ok(())
+
+    // Start indexer in background
+    let config_clone = config.clone();
+    let indexer_handle = tokio::spawn(async move {
+        match Indexer::new(&config_clone).await {
+            Ok(indexer) => {
+                if let Err(e) = indexer.start(true).await {
+                    tracing::error!("Indexer error: {}", e);
+                }
+            }
+            Err(e) => {
+                tracing::error!("Failed to create indexer: {}", e);
+            }
+        }
+    });
+
+    // Start API server
+    let server_result = server::serve(config, address, port).await;
+
+    // If server exits, wait for indexer to finish
+    indexer_handle.abort();
+
+    server_result
 }

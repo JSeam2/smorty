@@ -4,10 +4,6 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.89"
 
-[lib]
-name = "smorty"
-path = "src/lib.rs"
-
 [[bin]]
 name = "smorty"
 path = "src/main.rs"

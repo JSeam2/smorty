@@ -13,7 +13,7 @@ model = "gpt-5-2025-08-07"
 apiKey = "TODO"
 temperature = 1.0
 
-# specifications
+# specifications to store in database
 [contracts.FeeManagerV3_Beets_Sonic_ETHUSD6h]
 chain = "sonic"
 address = "0x3295c142F1D0A2627A8a02Caedb1C5739A68Dd30"
@@ -22,7 +22,6 @@ abiPath = "abi/FeeManagerV3_Beets.json"
 [[contracts.FeeManagerV3_Beets_Sonic_ETHUSD6h.specs]]
 name = "FeeUpdated"
 startBlock = 47463429
-endpoint = "/sonic/FeeManagerV3Beets-Sonic-ETHUSD6h/FeeUpdated"
 task = """
 1. Track event FeeUpdated(uint256 swapFeePercentage).
 2. Persist swapFeePercentage with blockNumber and timestamp for a time series.
@@ -31,8 +30,19 @@ task = """
 [[contracts.FeeManagerV3_Beets_Sonic_ETHUSD6h.specs]]
 name = "PoolUpdated"
 startBlock = 47463429
-endpoint = "/sonic/FeeManagerV3Beets_Sonic_ETHUSD6h/PoolUpdated"
 task = """
 1. Track event PoolUpdated(address indexed pool, uint256 swapFeePercentage).
 2. Persist swapFeePercentage with blockNumber and timestamp for a time series.
+"""
+
+[[endpoints]]
+description = "Return time series of swap fee percentage changes for a given pool address emitted by the FeeManagerV3_Beets_Sonic_ETHUSD6h contract."
+endpoint = "/sonic/fee-manager-v3/0x3295c142F1D0A2627A8a02Caedb1C5739A68Dd30/fee-change/{pool}"
+task = """
+1. Provide a time series of swap fee percentage changes vs block timestamp for the indexed pool address from the PoolUpdated events.
+2. Also provide a time weighted average for the past 10 periods.
+2. Default to last 50 data points if no limit is specified.
+3. Allow optional query parameter 'limit' to specify number of data points to return, cap at 200 to prevent spam.
+4. Allow a user to query startBlockTimestamp to filter results from that timestamp onward.
+5. Note that 100% is 1e18 and the swap fee percentage recorded need to be divided by 1e18 to get a human readable percentage.
 """

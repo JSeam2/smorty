@@ -24,17 +24,17 @@ impl Migration {
         }
 
         // Load previous schema state (if it exists)
-        let state_file = Path::new("schema.json");
+        let state_file = migrations_dir.join("schema.json");
         let old_state = if state_file.exists() {
-            tracing::info!("Loading previous schema state from schema.json");
-            SchemaState::load(state_file)?
+            tracing::info!("Loading previous schema state from migrations/schema.json");
+            SchemaState::load(&state_file)?
         } else {
             tracing::info!("No previous schema state found - this is an initial migration");
             SchemaState::new()
         };
 
         // Build new schema state from IR files
-        let ir_results = Ir::load_all_ir(config)?;
+        let ir_results = Ir::load_all_ir_specs(config)?;
         let new_state = Self::build_schema_state_from_ir(&ir_results)?;
 
         // Compute diff
@@ -45,8 +45,28 @@ impl Migration {
             return Ok(());
         }
 
-        // Generate migration SQL based on diff
+        // Generate timestamp for this migration
         let timestamp = Utc::now().format("%Y%m%d%H%M%S").to_string();
+
+        // Create backup of old schema state if it exists
+        if state_file.exists() {
+            let backup_file = migrations_dir.join(format!("{}_schema.json", timestamp));
+            fs::copy(&state_file, &backup_file)
+                .context("Failed to create schema backup")?;
+
+            tracing::info!(
+                "Created schema backup: {:?}",
+                backup_file.file_name().unwrap()
+            );
+            tracing::info!(
+                "This backup is for recovery purposes in case the new migration fails."
+            );
+            tracing::info!(
+                "You can safely delete old schema backups once migrations are verified to work correctly."
+            );
+        }
+
+        // Generate migration SQL based on diff
         let migration_sql = Self::generate_migration_sql(&diff)?;
 
         // Write migration file
@@ -61,10 +81,10 @@ impl Migration {
             .context("Failed to write migration file")?;
 
         // Save new schema state
-        new_state.save(state_file)?;
+        new_state.save(&state_file)?;
 
         tracing::info!("Generated migration file: {:?}", migration_file);
-        tracing::info!("Schema state saved to schema.json");
+        tracing::info!("Schema state saved to migrations/schema.json");
 
         Ok(())
     }
@@ -171,10 +191,46 @@ impl Migration {
 
         // Add new columns
         for column in &table_diff.columns_added {
-            sql.push_str(&format!(
-                "ALTER TABLE {} ADD COLUMN IF NOT EXISTS {} {};\n",
-                table_diff.table_name, column.name, column.column_type
-            ));
+            // Check if column has NOT NULL constraint
+            let has_not_null = column.column_type.to_uppercase().contains("NOT NULL");
+
+            if has_not_null {
+                // Generate warning for NOT NULL columns being added to existing tables
+                sql.push_str("-- WARNING: Adding NOT NULL column to existing table with data will fail\n");
+                sql.push_str(&format!(
+                    "-- You must manually decide how to handle this. Options:\n"
+                ));
+                sql.push_str(&format!(
+                    "-- 1. Add column as nullable first, set default values, then add NOT NULL:\n"
+                ));
+                sql.push_str(&format!(
+                    "--    ALTER TABLE {} ADD COLUMN IF NOT EXISTS {} {};\n",
+                    table_diff.table_name,
+                    column.name,
+                    column.column_type.replace("NOT NULL", "").trim()
+                ));
+                sql.push_str(&format!(
+                    "--    UPDATE {} SET {} = <default_value> WHERE {} IS NULL;\n",
+                    table_diff.table_name, column.name, column.name
+                ));
+                sql.push_str(&format!(
+                    "--    ALTER TABLE {} ALTER COLUMN {} SET NOT NULL;\n",
+                    table_diff.table_name, column.name
+                ));
+                sql.push_str(&format!(
+                    "-- 2. Add column with a DEFAULT value:\n"
+                ));
+                sql.push_str(&format!(
+                    "--    ALTER TABLE {} ADD COLUMN IF NOT EXISTS {} {} DEFAULT <default_value>;\n",
+                    table_diff.table_name, column.name, column.column_type
+                ));
+                sql.push_str("-- Uncomment and modify one of the approaches above\n\n");
+            } else {
+                sql.push_str(&format!(
+                    "ALTER TABLE {} ADD COLUMN IF NOT EXISTS {} {};\n",
+                    table_diff.table_name, column.name, column.column_type
+                ));
+            }
         }
 
         // Drop columns
@@ -281,7 +337,7 @@ impl Migration {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ai::{ColumnDef, EventField, QueryParam, TableSchema};
+    use crate::ai::{ColumnDef, EventField, TableSchema};
     use crate::config::{AiConfig, ContractConfig, DatabaseConfig, OpenAiConfig, SpecConfig};
     use std::collections::HashMap;
     use tempfile::TempDir;
@@ -319,7 +375,6 @@ mod tests {
             start_block: 12345678,
             contract_address: "0x1234567890123456789012345678901234567890".to_string(),
             chain: "ethereum".to_string(),
-            endpoint: format!("/test/{}", event_name.to_lowercase()),
             indexed_fields: vec![
                 EventField {
                     name: "amount".to_string(),
@@ -364,14 +419,7 @@ mod tests {
                     "CREATE INDEX idx_user ON {table_name}(user)".to_string(),
                 ],
             },
-            query_params: vec![
-                QueryParam {
-                    name: "limit".to_string(),
-                    param_type: "u64".to_string(),
-                    default: Some(serde_json::json!("100")),
-                },
-            ],
-            endpoint_description: "Test endpoint".to_string(),
+            description: "Test endpoint".to_string(),
         }
     }
 
@@ -385,7 +433,6 @@ mod tests {
                 .map(|name| SpecConfig {
                     name: name.to_string(),
                     start_block: Some(0),
-                    endpoint: format!("/test/{}", name),
                     task: "Test task".to_string(),
                 })
                 .collect();
@@ -414,6 +461,7 @@ mod tests {
                 },
             },
             contracts: contract_configs,
+            endpoints: Vec::new(),
         }
     }
 
@@ -430,7 +478,7 @@ mod tests {
         let config = create_mock_config(vec![("TestContract", vec!["Event1"])]);
 
         // Create IR directory and files
-        let ir_dir = Path::new("ir").join("TestContract");
+        let ir_dir = Path::new("ir/specs").join("TestContract");
         fs::create_dir_all(&ir_dir).unwrap();
 
         let ir = create_mock_ir("testcontract_event1", "Event1");
@@ -449,6 +497,7 @@ mod tests {
         let entries: Vec<_> = fs::read_dir("migrations")
             .unwrap()
             .filter_map(|e| e.ok())
+            .filter(|e| e.path().extension().map_or(false, |ext| ext == "sql"))
             .collect();
 
         assert_eq!(entries.len(), 1, "Should create exactly one migration file");
@@ -466,8 +515,8 @@ mod tests {
         assert!(contents.contains("-- TestContract/Event1"));
         assert!(contents.contains("CREATE TABLE IF NOT EXISTS testcontract_event1"));
 
-        // Check that schema.json was created
-        assert!(Path::new("schema.json").exists());
+        // Check that schema.json was created in migrations directory
+        assert!(Path::new("migrations/schema.json").exists());
         // Guard automatically restores directory when dropped
     }
 
@@ -489,7 +538,7 @@ mod tests {
         ];
 
         for (contract, event, table_name) in contracts {
-            let ir_dir = Path::new("ir").join(contract);
+            let ir_dir = Path::new("ir/specs").join(contract);
             fs::create_dir_all(&ir_dir).unwrap();
 
             let ir = create_mock_ir(table_name, event);
@@ -504,6 +553,7 @@ mod tests {
         let migration_files: Vec<_> = fs::read_dir("migrations")
             .unwrap()
             .filter_map(|e| e.ok())
+            .filter(|e| e.path().extension().map_or(false, |ext| ext == "sql"))
             .collect();
 
         assert_eq!(migration_files.len(), 1);
@@ -518,6 +568,10 @@ mod tests {
         assert!(contents.contains("CREATE TABLE IF NOT EXISTS contract1_event1"));
         assert!(contents.contains("CREATE TABLE IF NOT EXISTS contract1_event2"));
         assert!(contents.contains("CREATE TABLE IF NOT EXISTS contract2_event3"));
+
+        // Clean up IR directories created by test
+        let _ = fs::remove_dir_all("ir/specs/Contract1");
+        let _ = fs::remove_dir_all("ir/specs/Contract2");
         // Guard automatically restores directory when dropped
     }
 
@@ -533,7 +587,7 @@ mod tests {
 
         // Create IR files with same index names
         for contract in ["Contract1", "Contract2"] {
-            let ir_dir = Path::new("ir").join(contract);
+            let ir_dir = Path::new("ir/specs").join(contract);
             fs::create_dir_all(&ir_dir).unwrap();
 
             let table_name = format!("{}_event1", contract.to_lowercase());
@@ -576,7 +630,7 @@ mod tests {
         let config = create_mock_config(vec![("TestContract", vec!["TestEvent"])]);
 
         // Create IR file
-        let ir_dir = Path::new("ir").join("TestContract");
+        let ir_dir = Path::new("ir/specs").join("TestContract");
         fs::create_dir_all(&ir_dir).unwrap();
 
         let ir = create_mock_ir("testcontract_testevent", "TestEvent");
@@ -590,6 +644,7 @@ mod tests {
         let migration_files: Vec<_> = fs::read_dir("migrations")
             .unwrap()
             .filter_map(|e| e.ok())
+            .filter(|e| e.path().extension().map_or(false, |ext| ext == "sql"))
             .collect();
 
         let contents = fs::read_to_string(migration_files[0].path()).unwrap();
@@ -625,7 +680,7 @@ mod tests {
         let config = create_mock_config(vec![("TestContract", vec!["TestEvent"])]);
 
         // Create IR file
-        let ir_dir = Path::new("ir").join("TestContract");
+        let ir_dir = Path::new("ir/specs").join("TestContract");
         fs::create_dir_all(&ir_dir).unwrap();
 
         let ir = create_mock_ir("testcontract_testevent", "TestEvent");
@@ -639,6 +694,7 @@ mod tests {
         let entries: Vec<_> = fs::read_dir("migrations")
             .unwrap()
             .filter_map(|e| e.ok())
+            .filter(|e| e.path().extension().map_or(false, |ext| ext == "sql"))
             .collect();
 
         let filename = entries[0].file_name();
@@ -681,7 +737,7 @@ mod tests {
         let config = create_mock_config(vec![("TestContract", vec!["TestEvent"])]);
 
         // Create IR file
-        let ir_dir = Path::new("ir").join("TestContract");
+        let ir_dir = Path::new("ir/specs").join("TestContract");
         fs::create_dir_all(&ir_dir).unwrap();
 
         let ir = create_mock_ir("testcontract_testevent", "TestEvent");
@@ -703,6 +759,314 @@ mod tests {
             Path::new("migrations").is_dir(),
             "Migrations should be a directory"
         );
+        // Guard automatically restores directory when dropped
+    }
+
+    #[test]
+    fn test_not_null_column_addition_generates_warning() {
+        let temp_dir = TempDir::new().unwrap();
+        let _guard = WorkingDirGuard::new(&temp_dir);
+
+        let config = create_mock_config(vec![("TestContract", vec!["TestEvent"])]);
+
+        // Create initial IR and migration
+        let ir_dir = Path::new("ir/specs").join("TestContract");
+        fs::create_dir_all(&ir_dir).unwrap();
+
+        let mut initial_ir = create_mock_ir("testcontract_testevent", "TestEvent");
+        // Remove the "amount" column for initial state
+        initial_ir.table_schema.columns.retain(|c| c.name != "amount");
+        let ir_json = serde_json::to_string_pretty(&initial_ir).unwrap();
+        fs::write(ir_dir.join("TestEvent.json"), ir_json).unwrap();
+
+        // Generate initial migration
+        Migration::generate_from_ir(&config).unwrap();
+
+        // Now add the NOT NULL column back
+        let updated_ir = create_mock_ir("testcontract_testevent", "TestEvent");
+        let ir_json = serde_json::to_string_pretty(&updated_ir).unwrap();
+        fs::write(ir_dir.join("TestEvent.json"), ir_json).unwrap();
+
+        // Generate update migration
+        Migration::generate_from_ir(&config).unwrap();
+
+        // Find the schema_update migration file
+        let migration_files: Vec<_> = fs::read_dir("migrations")
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_name().to_str().unwrap().contains("schema_update"))
+            .collect();
+
+        assert_eq!(migration_files.len(), 1, "Should have one schema_update migration");
+
+        let contents = fs::read_to_string(migration_files[0].path()).unwrap();
+
+        // Verify warning is present
+        assert!(
+            contents.contains("-- WARNING: Adding NOT NULL column to existing table with data will fail"),
+            "Should contain warning about NOT NULL column"
+        );
+        assert!(
+            contents.contains("-- You must manually decide how to handle this"),
+            "Should provide manual intervention instructions"
+        );
+        assert!(
+            contents.contains("-- 1. Add column as nullable first"),
+            "Should provide option 1"
+        );
+        assert!(
+            contents.contains("-- 2. Add column with a DEFAULT value"),
+            "Should provide option 2"
+        );
+
+        // Verify the actual ALTER TABLE commands are commented out
+        assert!(
+            contents.contains(&format!("--    ALTER TABLE testcontract_testevent ADD COLUMN IF NOT EXISTS amount NUMERIC(78, 0)")),
+            "Should have commented ALTER TABLE with nullable column"
+        );
+        assert!(
+            contents.contains("--    UPDATE testcontract_testevent SET amount = <default_value>"),
+            "Should have commented UPDATE statement"
+        );
+        assert!(
+            contents.contains("--    ALTER TABLE testcontract_testevent ALTER COLUMN amount SET NOT NULL"),
+            "Should have commented SET NOT NULL statement"
+        );
+
+        // Guard automatically restores directory when dropped
+    }
+
+    #[test]
+    fn test_nullable_column_addition_no_warning() {
+        let temp_dir = TempDir::new().unwrap();
+        let _guard = WorkingDirGuard::new(&temp_dir);
+
+        let config = create_mock_config(vec![("TestContract", vec!["TestEvent"])]);
+
+        // Create initial IR and migration with base columns only
+        let ir_dir = Path::new("ir/specs").join("TestContract");
+        fs::create_dir_all(&ir_dir).unwrap();
+
+        let mut initial_ir = create_mock_ir("testcontract_testevent", "TestEvent");
+        let ir_json = serde_json::to_string_pretty(&initial_ir).unwrap();
+        fs::write(ir_dir.join("TestEvent.json"), ir_json).unwrap();
+
+        Migration::generate_from_ir(&config).unwrap();
+
+        // Add a nullable column to the existing schema
+        initial_ir.table_schema.columns.push(ColumnDef {
+            name: "optional_field".to_string(),
+            column_type: "TEXT".to_string(), // No NOT NULL constraint
+        });
+        let ir_json = serde_json::to_string_pretty(&initial_ir).unwrap();
+        fs::write(ir_dir.join("TestEvent.json"), ir_json).unwrap();
+
+        Migration::generate_from_ir(&config).unwrap();
+
+        // Find the schema_update migration file
+        let migration_files: Vec<_> = fs::read_dir("migrations")
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_name().to_str().unwrap().contains("schema_update"))
+            .collect();
+
+        let contents = fs::read_to_string(migration_files[0].path()).unwrap();
+
+        // Verify no warning for nullable column
+        assert!(
+            contents.contains("ALTER TABLE testcontract_testevent ADD COLUMN IF NOT EXISTS optional_field TEXT;"),
+            "Should have uncommented ALTER TABLE for nullable column"
+        );
+        assert!(
+            !contents.contains("-- WARNING: Adding NOT NULL column"),
+            "Should not contain NOT NULL warning for nullable column"
+        );
+
+        // Guard automatically restores directory when dropped
+    }
+
+    #[test]
+    fn test_schema_backup_created_on_update() {
+        let temp_dir = TempDir::new().unwrap();
+        let _guard = WorkingDirGuard::new(&temp_dir);
+
+        let config = create_mock_config(vec![("TestContract", vec!["TestEvent"])]);
+
+        // Create initial IR and migration
+        let ir_dir = Path::new("ir/specs").join("TestContract");
+        fs::create_dir_all(&ir_dir).unwrap();
+
+        let mut initial_ir = create_mock_ir("testcontract_testevent", "TestEvent");
+        let ir_json = serde_json::to_string_pretty(&initial_ir).unwrap();
+        fs::write(ir_dir.join("TestEvent.json"), ir_json).unwrap();
+
+        // Generate initial migration
+        Migration::generate_from_ir(&config).unwrap();
+
+        // Verify schema.json exists
+        assert!(Path::new("migrations/schema.json").exists());
+
+        // Modify IR to trigger an update
+        initial_ir.table_schema.columns.push(ColumnDef {
+            name: "new_field".to_string(),
+            column_type: "TEXT".to_string(),
+        });
+        let ir_json = serde_json::to_string_pretty(&initial_ir).unwrap();
+        fs::write(ir_dir.join("TestEvent.json"), ir_json).unwrap();
+
+        // Generate update migration
+        Migration::generate_from_ir(&config).unwrap();
+
+        // Find schema backup files (format: {timestamp}_schema.json)
+        let backup_files: Vec<_> = fs::read_dir("migrations")
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .filter(|e| {
+                let name = e.file_name();
+                let name_str = name.to_str().unwrap();
+                name_str.ends_with("_schema.json") && name_str != "schema.json"
+            })
+            .collect();
+
+        assert_eq!(
+            backup_files.len(),
+            1,
+            "Should create exactly one schema backup"
+        );
+
+        let backup_name = backup_files[0].file_name();
+        let backup_name_str = backup_name.to_str().unwrap();
+
+        // Verify backup filename format: {timestamp}_schema.json
+        assert!(backup_name_str.ends_with("_schema.json"));
+        let timestamp_part = backup_name_str.trim_end_matches("_schema.json");
+        assert_eq!(
+            timestamp_part.len(),
+            14,
+            "Timestamp should be 14 digits (YYYYMMDDHHmmss)"
+        );
+        assert!(
+            timestamp_part.chars().all(|c| c.is_ascii_digit()),
+            "Timestamp should be all digits"
+        );
+
+        // Verify the backup contains valid schema data
+        let backup_contents = fs::read_to_string(backup_files[0].path()).unwrap();
+        assert!(
+            serde_json::from_str::<serde_json::Value>(&backup_contents).is_ok(),
+            "Backup should contain valid JSON"
+        );
+
+        // Guard automatically restores directory when dropped
+    }
+
+    #[test]
+    fn test_no_backup_on_initial_migration() {
+        let temp_dir = TempDir::new().unwrap();
+        let _guard = WorkingDirGuard::new(&temp_dir);
+
+        let config = create_mock_config(vec![("TestContract", vec!["TestEvent"])]);
+
+        // Create initial IR
+        let ir_dir = Path::new("ir/specs").join("TestContract");
+        fs::create_dir_all(&ir_dir).unwrap();
+
+        let ir = create_mock_ir("testcontract_testevent", "TestEvent");
+        let ir_json = serde_json::to_string_pretty(&ir).unwrap();
+        fs::write(ir_dir.join("TestEvent.json"), ir_json).unwrap();
+
+        // Generate initial migration
+        Migration::generate_from_ir(&config).unwrap();
+
+        // Verify no backup files exist (only schema.json should exist)
+        let backup_files: Vec<_> = fs::read_dir("migrations")
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .filter(|e| {
+                let name = e.file_name();
+                let name_str = name.to_str().unwrap();
+                name_str.ends_with("_schema.json") && name_str != "schema.json"
+            })
+            .collect();
+
+        assert_eq!(
+            backup_files.len(),
+            0,
+            "Should not create backup on initial migration"
+        );
+
+        // Verify schema.json exists
+        assert!(Path::new("migrations/schema.json").exists());
+
+        // Guard automatically restores directory when dropped
+    }
+
+    #[test]
+    fn test_schema_backup_timestamp_matches_migration() {
+        let temp_dir = TempDir::new().unwrap();
+        let _guard = WorkingDirGuard::new(&temp_dir);
+
+        let config = create_mock_config(vec![("TestContract", vec!["TestEvent"])]);
+
+        // Create initial IR and migration
+        let ir_dir = Path::new("ir/specs").join("TestContract");
+        fs::create_dir_all(&ir_dir).unwrap();
+
+        let mut initial_ir = create_mock_ir("testcontract_testevent", "TestEvent");
+        let ir_json = serde_json::to_string_pretty(&initial_ir).unwrap();
+        fs::write(ir_dir.join("TestEvent.json"), ir_json).unwrap();
+
+        Migration::generate_from_ir(&config).unwrap();
+
+        // Modify IR
+        initial_ir.table_schema.columns.push(ColumnDef {
+            name: "new_field".to_string(),
+            column_type: "TEXT".to_string(),
+        });
+        let ir_json = serde_json::to_string_pretty(&initial_ir).unwrap();
+        fs::write(ir_dir.join("TestEvent.json"), ir_json).unwrap();
+
+        // Generate update migration
+        Migration::generate_from_ir(&config).unwrap();
+
+        // Find the migration file
+        let migration_files: Vec<_> = fs::read_dir("migrations")
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_name().to_str().unwrap().contains("schema_update.sql"))
+            .collect();
+
+        let migration_name = migration_files[0].file_name();
+        let migration_timestamp = migration_name
+            .to_str()
+            .unwrap()
+            .split('_')
+            .next()
+            .unwrap();
+
+        // Find the backup file
+        let backup_files: Vec<_> = fs::read_dir("migrations")
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .filter(|e| {
+                let name = e.file_name();
+                let name_str = name.to_str().unwrap();
+                name_str.ends_with("_schema.json") && name_str != "schema.json"
+            })
+            .collect();
+
+        let backup_name = backup_files[0].file_name();
+        let backup_timestamp = backup_name
+            .to_str()
+            .unwrap()
+            .trim_end_matches("_schema.json");
+
+        // Verify timestamps match
+        assert_eq!(
+            migration_timestamp, backup_timestamp,
+            "Migration and backup timestamps should match"
+        );
+
         // Guard automatically restores directory when dropped
     }
 }

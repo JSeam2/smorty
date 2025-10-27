@@ -10,6 +10,7 @@ pub struct Config {
     pub chains: HashMap<String, String>,
     pub ai: AiConfig,
     pub contracts: HashMap<String, ContractConfig>,
+    pub endpoints: Vec<EndpointConfig>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -44,6 +45,12 @@ pub struct SpecConfig {
     pub name: String,
     #[serde(rename = "startBlock")]
     pub start_block: Option<u64>,
+    pub task: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EndpointConfig {
+    pub description: String,
     pub endpoint: String,
     pub task: String,
 }
@@ -126,12 +133,18 @@ abiPath = "abi/test.json"
 [[contracts.TestContract.specs]]
 name = "TestEvent"
 startBlock = 1000
-endpoint = "/test/event"
 task = "Track TestEvent"
+
+[[endpoints]]
+description = "Get test events"
+endpoint = "/test/event"
+task = "Return all test events"
 "#;
 
         let config: Config = toml::from_str(toml_str).unwrap();
         assert_eq!(config.chains.len(), 2);
         assert_eq!(config.contracts.len(), 1);
+        assert_eq!(config.endpoints.len(), 1);
+        assert_eq!(config.endpoints[0].endpoint, "/test/event");
     }
 }
