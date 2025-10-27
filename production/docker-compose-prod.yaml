@@ -67,7 +67,7 @@ services:
       start_period: 40s
     # Only expose internally, not to host
     expose:
-      - "8080"
+      - "3000"
 
   nginx:
     image: nginx:1.27-alpine
