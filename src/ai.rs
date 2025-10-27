@@ -132,12 +132,20 @@ Important Solidity to PostgreSQL type mappings:
 For indexed event parameters, note them in the response but they don't need special database treatment.
 
 IMPORTANT: Table naming convention (STRICT):
-- ALWAYS use the format: {contract_name}_{spec_name} (in lowercase with underscores)
-- Convert any hyphens, camelCase, or special characters to underscores
-- Example: Contract "FeeManagerV3_Beets_Sonic_ETHUSD6h" + Spec "PoolUpdated" = "feemanagerv3_beets_sonic_ethusd6h_poolupdated"
-- Example: swapFeePercentage to swap_fee_percentage
-- DO NOT use generic names like "pool_updated_events" or "fee_updated_events"
-- This ensures tables from different contracts never collide, even if they track the same event types."#;
+- Use abbreviated contract names to avoid PostgreSQL 63-character identifier limit
+- Format: {abbreviated_contract}_{spec_name} (lowercase with underscores)
+- Abbreviate contract names by:
+  1. Taking first 2-3 letters of each major component
+  2. Keeping it under 20 characters total for contract abbreviation
+  3. Making it recognizable but concise
+- Examples:
+  * "FeeManagerV3_Beets_Sonic_ETHUSD6h" + "PoolUpdated" = "fmv3_beets_sonic_poolupdated" (30 chars)
+  * "BalancerV2_Vault" + "Swap" = "balv2_vault_swap" (16 chars)
+  * "UniswapV3Pool" + "Mint" = "univ3_pool_mint" (15 chars)
+- Convert camelCase field names to snake_case: swapFeePercentage → swap_fee_percentage
+- Keep spec names concise but descriptive
+- NEVER use generic names like "pool_updated_events"
+- This prevents table collisions and PostgreSQL identifier truncation issues."#;
 
         let sblock = start_block.unwrap_or(0);
 

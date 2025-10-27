@@ -291,6 +291,7 @@ impl Migration {
     }
 
     /// Make index name unique by prefixing with table name
+    /// Ensures the final name stays within PostgreSQL's 63-character limit
     fn make_index_name_unique(index_sql: &str, table_name: &str) -> String {
         let mut index_sql = index_sql.to_string();
 
@@ -298,8 +299,29 @@ impl Migration {
             if let Some(on_pos) = index_sql.find(" ON ") {
                 let start = idx_pos + "CREATE INDEX ".len();
                 let old_index_name = &index_sql[start..on_pos];
+
+                // PostgreSQL identifier limit is 63 characters
+                // Use table_name + "_" + index_name, but truncate if needed
                 let new_index_name = format!("{}_{}", table_name, old_index_name);
-                index_sql = index_sql.replace(old_index_name, &new_index_name);
+
+                // If the name is too long, use a hash-based approach
+                let final_index_name = if new_index_name.len() > 63 {
+                    // Use first 40 chars of table_name + hash of full name
+                    use std::collections::hash_map::DefaultHasher;
+                    use std::hash::{Hash, Hasher};
+
+                    let mut hasher = DefaultHasher::new();
+                    new_index_name.hash(&mut hasher);
+                    let hash = hasher.finish();
+
+                    // Take first part of table name and add hash suffix
+                    let prefix_len = 40.min(table_name.len());
+                    format!("{}_{:x}", &table_name[..prefix_len], hash)
+                } else {
+                    new_index_name
+                };
+
+                index_sql = index_sql.replace(old_index_name, &final_index_name);
             }
         }
 
