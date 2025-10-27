@@ -186,7 +186,7 @@ For deployments after the initial bootstrap (when `ir/` and `migrations/` alread
 
 ```bash
 cd production
-docker compose -f docker compose-prod.yaml up -d
+docker compose -f docker-compose-prod.yaml up -d
 ```
 
 #### Updating Configuration
@@ -195,13 +195,13 @@ If you update `config.toml` with new contracts or endpoints, repeat the bootstra
 
 ```bash
 # Ensure database is running
-docker compose -f docker compose-prod.yaml up -d postgres
+docker compose -f docker-compose-prod.yaml up -d postgres
 
 # Re-run bootstrap commands
-docker compose -f docker compose-prod.yaml run --rm smorty-app smorty gen-spec
-docker compose -f docker compose-prod.yaml run --rm smorty-app smorty gen-migration
-docker compose -f docker compose-prod.yaml run --rm smorty-app smorty migrate
-docker compose -f docker compose-prod.yaml run --rm smorty-app smorty gen-endpoint
+docker compose -f docker-compose-prod.yaml run --rm smorty-app smorty gen-spec
+docker compose -f docker-compose-prod.yaml run --rm smorty-app smorty gen-migration
+docker compose -f docker-compose-prod.yaml run --rm smorty-app smorty migrate
+docker compose -f docker-compose-prod.yaml run --rm smorty-app smorty gen-endpoint
 
 # Restart the application to pick up changes
 docker compose -f docker compose-prod.yaml restart smorty-app
@@ -213,12 +213,12 @@ docker compose -f docker compose-prod.yaml restart smorty-app
 
 ```bash
 # All services
-docker compose -f docker compose-prod.yaml logs -f
+docker compose -f docker-compose-prod.yaml logs -f
 
 # Specific service
-docker compose -f docker compose-prod.yaml logs -f smorty-app
-docker compose -f docker compose-prod.yaml logs -f postgres
-docker compose -f docker compose-prod.yaml logs -f nginx
+docker compose -f docker-compose-prod.yaml logs -f smorty-app
+docker compose -f docker-compose-prod.yaml logs -f postgres
+docker compose -f docker-compose-prod.yaml logs -f nginx
 ```
 
 ### Stop Services
