@@ -1,0 +1,66 @@
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Documentation
+*.md
+docs/
+LICENSE
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Development
+.env
+.env.*
+config.toml
+*.log
+
+# Build artifacts
+target/
+dist/
+build/
+
+# Dependencies
+node_modules/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+pg_data/
+
+# Testing
+coverage/
+.coverage
+*.test
+
+# Production deployment files (not needed in image)
+production/
+docker-compose*.yaml
+Dockerfile*
+.dockerignore
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Backup files
+*.bak
+*.backup
+*~
