@@ -43,8 +43,8 @@ WORKDIR /app
 # Copy the binary from builder
 COPY --from=builder /app/target/release/smorty /usr/local/bin/smorty
 
-# Create directories for config and data
-RUN mkdir -p /app/config /app/abi && \
+# Create directories for config, data, and generated files
+RUN mkdir -p /app/config /app/abi /app/ir /app/migrations && \
     chown -R appuser:appuser /app
 
 # Switch to non-root user

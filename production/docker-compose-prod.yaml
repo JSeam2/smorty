@@ -47,6 +47,11 @@ services:
       - ../config.toml:/app/config/config.toml:ro
       - ../abi:/app/abi:ro
 
+      # Mount generated files directories for persistence and version control
+      # These directories need write access for gen-spec, gen-migration, gen-endpoint commands
+      - ../ir:/app/ir
+      - ../migrations:/app/migrations
+
       # Uncomment for development with hot reload
       # - ../src:/app/src:ro
     networks:

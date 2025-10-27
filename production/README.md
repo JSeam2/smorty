@@ -107,11 +107,104 @@ Edit `nginx/conf.d/smorty.conf` and replace `server_name _;` with your domain:
 server_name yourdomain.com;
 ```
 
-### 5. Deploy
+### 5. Bootstrap Database and Application
+
+Smorty requires a bootstrapping process where the database must be running first to generate specifications, migrations, and endpoints. These generated files will be persisted to your local filesystem (in `ir/` and `migrations/` directories) so they can be committed to version control.
+
+#### Step 1: Create Required Directories
+
+```bash
+# From project root
+cd ..
+mkdir -p ir/specs ir/endpoints migrations
+```
+
+#### Step 2: Start PostgreSQL Only
+
+```bash
+cd production
+docker-compose -f docker-compose-prod.yaml up -d postgres
+```
+
+Wait for PostgreSQL to be healthy:
+```bash
+docker-compose -f docker-compose-prod.yaml ps postgres
+# Wait until status shows "healthy"
+```
+
+#### Step 3: Build Application Image
+
+```bash
+docker-compose -f docker-compose-prod.yaml build smorty-app
+```
+
+#### Step 4: Run Smorty Bootstrap Commands
+
+Run the bootstrap commands in sequence. The generated files will be written to your host filesystem via volume mounts:
+
+```bash
+# Generate specifications from config.toml
+docker-compose -f docker-compose-prod.yaml run --rm smorty-app smorty gen-spec
+
+# Generate migrations based on specs
+docker-compose -f docker-compose-prod.yaml run --rm smorty-app smorty gen-migration
+
+# Apply migrations to database
+docker-compose -f docker-compose-prod.yaml run --rm smorty-app smorty migrate
+
+# Generate API endpoints
+docker-compose -f docker-compose-prod.yaml run --rm smorty-app smorty gen-endpoint
+```
+
+After running these commands, you should see:
+- Generated spec files in `ir/specs/`
+- Generated endpoint files in `ir/endpoints/`
+- Schema state in `migrations/schema.json`
+- Actual SQL migrations in `migrations/` (if applicable)
+
+**Important:** Commit these generated files to your repository:
+```bash
+cd ..
+git add ir/ migrations/
+git commit -m "Add generated specs, migrations, and endpoints"
+```
+
+#### Step 5: Start All Services
+
+Now that bootstrapping is complete, start all services:
 
 ```bash
 cd production
 docker-compose -f docker-compose-prod.yaml up -d
+```
+
+This will start the application and nginx, which will use the already-running database and the generated files.
+
+#### Subsequent Deployments
+
+For deployments after the initial bootstrap (when `ir/` and `migrations/` already exist):
+
+```bash
+cd production
+docker-compose -f docker-compose-prod.yaml up -d
+```
+
+#### Updating Configuration
+
+If you update `config.toml` with new contracts or endpoints, repeat the bootstrap process:
+
+```bash
+# Ensure database is running
+docker-compose -f docker-compose-prod.yaml up -d postgres
+
+# Re-run bootstrap commands
+docker-compose -f docker-compose-prod.yaml run --rm smorty-app smorty gen-spec
+docker-compose -f docker-compose-prod.yaml run --rm smorty-app smorty gen-migration
+docker-compose -f docker-compose-prod.yaml run --rm smorty-app smorty migrate
+docker-compose -f docker-compose-prod.yaml run --rm smorty-app smorty gen-endpoint
+
+# Restart the application to pick up changes
+docker-compose -f docker-compose-prod.yaml restart smorty-app
 ```
 
 ## Management Commands
@@ -154,6 +247,27 @@ docker exec smorty-postgres pg_dump -U postgres smorty > backup_$(date +%Y%m%d_%
 
 # Restore
 cat backup.sql | docker exec -i smorty-postgres psql -U postgres -d smorty
+```
+
+### Managing Generated Files
+
+The bootstrap commands generate files that are persisted on your host filesystem:
+
+```bash
+# View generated specs
+ls -la ../ir/specs/
+
+# View generated endpoints
+ls -la ../ir/endpoints/
+
+# View migration schema state
+cat ../migrations/schema.json
+
+# These files should be committed to version control
+cd ..
+git status
+git add ir/ migrations/
+git commit -m "Update generated specs and migrations"
 ```
 
 ## Kubernetes Deployment
