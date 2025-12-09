@@ -1,0 +1,36 @@
+{
+  "id": "chatcmpl-Ckwsgaw9O2pOuR8vFI41uKg6KLzgZ",
+  "object": "chat.completion",
+  "created": 1765305462,
+  "model": "gpt-4o-2024-08-06",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "```json\n{\n  \"event_name\": \"Transfer\",\n  \"event_signature\": \"Transfer(address,address,uint256)\",\n  \"start_block\": 0,\n  \"contract_address\": \"0x0000000000000000000000000000000000000001\",\n  \"chain\": \"mainnet\",\n  \"indexed_fields\": [\n    {\"name\": \"src\", \"solidity_type\": \"address\", \"rust_type\": \"String\", \"indexed\": true},\n    {\"name\": \"dst\", \"solidity_type\": \"address\", \"rust_type\": \"String\", \"indexed\": true},\n    {\"name\": \"wad\", \"solidity_type\": \"uint256\", \"rust_type\": \"String\", \"indexed\": false}\n  ],\n  \"table_schema\": {\n    \"table_name\": \"weth_transfers\",\n    \"columns\": [\n      {\"name\": \"id\", \"type\": \"BIGSERIAL PRIMARY KEY\"},\n      {\"name\": \"block_number\", \"type\": \"BIGINT NOT NULL\"},\n      {\"name\": \"block_timestamp\", \"type\": \"BIGINT NOT NULL\"},\n      {\"name\": \"transaction_hash\", \"type\": \"VARCHAR(66) NOT NULL\"},\n      {\"name\": \"log_index\", \"type\": \"INTEGER NOT NULL\"},\n      {\"name\": \"src\", \"type\": \"VARCHAR(42) NOT NULL\"},\n      {\"name\": \"dst\", \"type\": \"VARCHAR(42) NOT NULL\"},\n      {\"name\": \"wad\", \"type\": \"NUMERIC(78, 0) NOT NULL\"}\n    ],\n    \"indexes\": [\n      \"CREATE INDEX idx_block_number ON weth_transfers(block_number)\",\n      \"CREATE INDEX idx_timestamp ON weth_transfers(block_timestamp)\",\n      \"CREATE INDEX idx_src ON weth_transfers(src)\",\n      \"CREATE INDEX idx_dst ON weth_transfers(dst)\"\n    ]\n  },\n  \"description\": \"Tracks all WETH token transfers by indexing the Transfer event.\"\n}\n```",
+        "refusal": null,
+        "annotations": []
+      },
+      "logprobs": null,
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1873,
+    "completion_tokens": 400,
+    "total_tokens": 2273,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "audio_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "audio_tokens": 0,
+      "accepted_prediction_tokens": 0,
+      "rejected_prediction_tokens": 0
+    }
+  },
+  "service_tier": "default",
+  "system_fingerprint": "fp_a4d13246c5"
+}

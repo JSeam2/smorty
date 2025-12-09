@@ -611,7 +611,7 @@ mod tests {
     #[test]
     fn test_full_ir_to_migration_flow() {
         // Use ai module types
-        use crate::ai::{EventField, ColumnDef};
+        use crate::ai::{ColumnDef, EventField};
 
         let temp_dir = TempDir::new().unwrap();
         let ir_dir = temp_dir.path().join("ir");
@@ -707,7 +707,12 @@ mod tests {
         let ir_generator = Ir::new(ai_client);
 
         ir_generator
-            .save_ir_spec_to_dir(&ir_dir, "SimpleToken", &create_mock_spec("transfers"), &transfer_ir)
+            .save_ir_spec_to_dir(
+                &ir_dir,
+                "SimpleToken",
+                &create_mock_spec("transfers"),
+                &transfer_ir,
+            )
             .expect("Failed to save transfer IR");
 
         ir_generator
@@ -720,8 +725,9 @@ mod tests {
 
         // Load and verify roundtrip
         let loaded: IrGenerationResult = serde_json::from_str(
-            &fs::read_to_string(ir_dir.join("SimpleToken/transfers.json")).unwrap()
-        ).unwrap();
+            &fs::read_to_string(ir_dir.join("SimpleToken/transfers.json")).unwrap(),
+        )
+        .unwrap();
 
         assert_eq!(loaded.event_name, "Transfer");
         assert_eq!(loaded.indexed_fields.len(), 3);
@@ -754,13 +760,18 @@ mod tests {
         let ir_generator = Ir::new(ai_client);
 
         ir_generator
-            .save_ir_spec_to_dir(&ir_dir, "Pausable", &create_mock_spec("paused"), &empty_event_ir)
+            .save_ir_spec_to_dir(
+                &ir_dir,
+                "Pausable",
+                &create_mock_spec("paused"),
+                &empty_event_ir,
+            )
             .expect("Failed to save empty event IR");
 
         // Load and verify
-        let loaded: IrGenerationResult = serde_json::from_str(
-            &fs::read_to_string(ir_dir.join("Pausable/paused.json")).unwrap()
-        ).unwrap();
+        let loaded: IrGenerationResult =
+            serde_json::from_str(&fs::read_to_string(ir_dir.join("Pausable/paused.json")).unwrap())
+                .unwrap();
 
         assert_eq!(loaded.event_name, "Paused");
         assert_eq!(loaded.indexed_fields.len(), 0);
@@ -771,7 +782,7 @@ mod tests {
     fn test_max_indexed_params() {
         // Solidity allows max 3 indexed params (stored in log topics)
         // This tests that edge case
-        use crate::ai::{EventField, ColumnDef};
+        use crate::ai::{ColumnDef, EventField};
 
         let temp_dir = TempDir::new().unwrap();
         let ir_dir = temp_dir.path().join("ir");
@@ -841,12 +852,18 @@ mod tests {
         let ir_generator = Ir::new(ai_client);
 
         ir_generator
-            .save_ir_spec_to_dir(&ir_dir, "MaxIndexed", &create_mock_spec("triple"), &max_indexed_ir)
+            .save_ir_spec_to_dir(
+                &ir_dir,
+                "MaxIndexed",
+                &create_mock_spec("triple"),
+                &max_indexed_ir,
+            )
             .expect("Failed to save max indexed IR");
 
         let loaded: IrGenerationResult = serde_json::from_str(
-            &fs::read_to_string(ir_dir.join("MaxIndexed/triple.json")).unwrap()
-        ).unwrap();
+            &fs::read_to_string(ir_dir.join("MaxIndexed/triple.json")).unwrap(),
+        )
+        .unwrap();
 
         // Verify 3 indexed fields
         let indexed_count = loaded.indexed_fields.iter().filter(|f| f.indexed).count();
@@ -857,7 +874,7 @@ mod tests {
     #[test]
     fn test_complex_types_bytes_and_arrays() {
         // Tests handling of dynamic types: bytes, arrays
-        use crate::ai::{EventField, ColumnDef};
+        use crate::ai::{ColumnDef, EventField};
 
         let temp_dir = TempDir::new().unwrap();
         let ir_dir = temp_dir.path().join("ir");
@@ -913,16 +930,32 @@ mod tests {
         let ir_generator = Ir::new(ai_client);
 
         ir_generator
-            .save_ir_spec_to_dir(&ir_dir, "DataContract", &create_mock_spec("submit"), &complex_ir)
+            .save_ir_spec_to_dir(
+                &ir_dir,
+                "DataContract",
+                &create_mock_spec("submit"),
+                &complex_ir,
+            )
             .expect("Failed to save complex types IR");
 
         let loaded: IrGenerationResult = serde_json::from_str(
-            &fs::read_to_string(ir_dir.join("DataContract/submit.json")).unwrap()
-        ).unwrap();
+            &fs::read_to_string(ir_dir.join("DataContract/submit.json")).unwrap(),
+        )
+        .unwrap();
 
         // Verify bytes and array are stored as TEXT
-        let data_col = loaded.table_schema.columns.iter().find(|c| c.name == "data").unwrap();
-        let values_col = loaded.table_schema.columns.iter().find(|c| c.name == "values").unwrap();
+        let data_col = loaded
+            .table_schema
+            .columns
+            .iter()
+            .find(|c| c.name == "data")
+            .unwrap();
+        let values_col = loaded
+            .table_schema
+            .columns
+            .iter()
+            .find(|c| c.name == "values")
+            .unwrap();
 
         assert_eq!(data_col.column_type, "TEXT");
         assert_eq!(values_col.column_type, "TEXT");
@@ -932,7 +965,7 @@ mod tests {
     fn test_multiple_contracts_same_event_name() {
         // Different contracts can have events with the same name
         // Tables should have unique names
-        use crate::ai::{EventField, ColumnDef};
+        use crate::ai::{ColumnDef, EventField};
 
         let temp_dir = TempDir::new().unwrap();
         let ir_dir = temp_dir.path().join("ir");
@@ -947,22 +980,18 @@ mod tests {
             start_block: 0,
             contract_address: "0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".to_string(),
             chain: "mainnet".to_string(),
-            indexed_fields: vec![
-                EventField {
-                    name: "from".to_string(),
-                    solidity_type: "address".to_string(),
-                    rust_type: "String".to_string(),
-                    indexed: true,
-                },
-            ],
+            indexed_fields: vec![EventField {
+                name: "from".to_string(),
+                solidity_type: "address".to_string(),
+                rust_type: "String".to_string(),
+                indexed: true,
+            }],
             table_schema: TableSchema {
                 table_name: "token_a_transfers".to_string(), // unique name
-                columns: vec![
-                    ColumnDef {
-                        name: "from_address".to_string(),
-                        column_type: "VARCHAR(42)".to_string(),
-                    },
-                ],
+                columns: vec![ColumnDef {
+                    name: "from_address".to_string(),
+                    column_type: "VARCHAR(42)".to_string(),
+                }],
                 indexes: vec![],
             },
             description: "Token A transfers".to_string(),
@@ -975,22 +1004,18 @@ mod tests {
             start_block: 0,
             contract_address: "0xBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB".to_string(),
             chain: "mainnet".to_string(),
-            indexed_fields: vec![
-                EventField {
-                    name: "from".to_string(),
-                    solidity_type: "address".to_string(),
-                    rust_type: "String".to_string(),
-                    indexed: true,
-                },
-            ],
+            indexed_fields: vec![EventField {
+                name: "from".to_string(),
+                solidity_type: "address".to_string(),
+                rust_type: "String".to_string(),
+                indexed: true,
+            }],
             table_schema: TableSchema {
                 table_name: "token_b_transfers".to_string(), // different unique name
-                columns: vec![
-                    ColumnDef {
-                        name: "from_address".to_string(),
-                        column_type: "VARCHAR(42)".to_string(),
-                    },
-                ],
+                columns: vec![ColumnDef {
+                    name: "from_address".to_string(),
+                    column_type: "VARCHAR(42)".to_string(),
+                }],
                 indexes: vec![],
             },
             description: "Token B transfers".to_string(),
@@ -998,26 +1023,41 @@ mod tests {
 
         // Save both
         ir_generator
-            .save_ir_spec_to_dir(&ir_dir, "TokenA", &create_mock_spec("transfers"), &transfer_a)
+            .save_ir_spec_to_dir(
+                &ir_dir,
+                "TokenA",
+                &create_mock_spec("transfers"),
+                &transfer_a,
+            )
             .expect("Failed to save Token A IR");
 
         ir_generator
-            .save_ir_spec_to_dir(&ir_dir, "TokenB", &create_mock_spec("transfers"), &transfer_b)
+            .save_ir_spec_to_dir(
+                &ir_dir,
+                "TokenB",
+                &create_mock_spec("transfers"),
+                &transfer_b,
+            )
             .expect("Failed to save Token B IR");
 
         // Load both and verify they have different table names
         let loaded_a: IrGenerationResult = serde_json::from_str(
-            &fs::read_to_string(ir_dir.join("TokenA/transfers.json")).unwrap()
-        ).unwrap();
+            &fs::read_to_string(ir_dir.join("TokenA/transfers.json")).unwrap(),
+        )
+        .unwrap();
 
         let loaded_b: IrGenerationResult = serde_json::from_str(
-            &fs::read_to_string(ir_dir.join("TokenB/transfers.json")).unwrap()
-        ).unwrap();
+            &fs::read_to_string(ir_dir.join("TokenB/transfers.json")).unwrap(),
+        )
+        .unwrap();
 
         // Same event name
         assert_eq!(loaded_a.event_name, loaded_b.event_name);
         // Different table names
-        assert_ne!(loaded_a.table_schema.table_name, loaded_b.table_schema.table_name);
+        assert_ne!(
+            loaded_a.table_schema.table_name,
+            loaded_b.table_schema.table_name
+        );
         // Different contract addresses
         assert_ne!(loaded_a.contract_address, loaded_b.contract_address);
     }
@@ -1025,7 +1065,7 @@ mod tests {
     #[test]
     fn test_large_start_block() {
         // Test handling of large block numbers (Ethereum mainnet is at ~19M+)
-        use crate::ai::{EventField, ColumnDef};
+        use crate::ai::{ColumnDef, EventField};
 
         let temp_dir = TempDir::new().unwrap();
         let ir_dir = temp_dir.path().join("ir");
@@ -1071,12 +1111,18 @@ mod tests {
         let ir_generator = Ir::new(ai_client);
 
         ir_generator
-            .save_ir_spec_to_dir(&ir_dir, "UniswapPair", &create_mock_spec("sync"), &large_block_ir)
+            .save_ir_spec_to_dir(
+                &ir_dir,
+                "UniswapPair",
+                &create_mock_spec("sync"),
+                &large_block_ir,
+            )
             .expect("Failed to save large block IR");
 
         let loaded: IrGenerationResult = serde_json::from_str(
-            &fs::read_to_string(ir_dir.join("UniswapPair/sync.json")).unwrap()
-        ).unwrap();
+            &fs::read_to_string(ir_dir.join("UniswapPair/sync.json")).unwrap(),
+        )
+        .unwrap();
 
         assert_eq!(loaded.start_block, 19_000_000);
     }
@@ -1084,7 +1130,7 @@ mod tests {
     #[test]
     fn test_multi_chain_same_contract() {
         // Same contract deployed on different chains
-        use crate::ai::{EventField, ColumnDef};
+        use crate::ai::{ColumnDef, EventField};
 
         let temp_dir = TempDir::new().unwrap();
         let ir_dir = temp_dir.path().join("ir");
@@ -1101,29 +1147,30 @@ mod tests {
                 start_block: 0,
                 contract_address: "0x0000000000000000000000000000000000000001".to_string(),
                 chain: chain.to_string(),
-                indexed_fields: vec![
-                    EventField {
-                        name: "user".to_string(),
-                        solidity_type: "address".to_string(),
-                        rust_type: "String".to_string(),
-                        indexed: true,
-                    },
-                ],
+                indexed_fields: vec![EventField {
+                    name: "user".to_string(),
+                    solidity_type: "address".to_string(),
+                    rust_type: "String".to_string(),
+                    indexed: true,
+                }],
                 table_schema: TableSchema {
                     table_name: format!("{}_swaps", chain),
-                    columns: vec![
-                        ColumnDef {
-                            name: "user".to_string(),
-                            column_type: "VARCHAR(42)".to_string(),
-                        },
-                    ],
+                    columns: vec![ColumnDef {
+                        name: "user".to_string(),
+                        column_type: "VARCHAR(42)".to_string(),
+                    }],
                     indexes: vec![],
                 },
                 description: format!("Swaps on {}", chain),
             };
 
             ir_generator
-                .save_ir_spec_to_dir(&ir_dir, &format!("DEX_{}", chain), &create_mock_spec("swaps"), &ir)
+                .save_ir_spec_to_dir(
+                    &ir_dir,
+                    &format!("DEX_{}", chain),
+                    &create_mock_spec("swaps"),
+                    &ir,
+                )
                 .expect(&format!("Failed to save {} IR", chain));
         }
 
@@ -1132,9 +1179,8 @@ mod tests {
             let path = ir_dir.join(format!("DEX_{}/swaps.json", chain));
             assert!(path.exists(), "IR file should exist for {}", chain);
 
-            let loaded: IrGenerationResult = serde_json::from_str(
-                &fs::read_to_string(&path).unwrap()
-            ).unwrap();
+            let loaded: IrGenerationResult =
+                serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
 
             assert_eq!(loaded.chain, *chain);
             assert_eq!(loaded.table_schema.table_name, format!("{}_swaps", chain));
