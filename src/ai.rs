@@ -55,7 +55,13 @@ pub struct AiClient {
 
 impl AiClient {
     pub fn new(api_key: String, model: String, temperature: f32) -> Self {
-        let config = OpenAIConfig::new().with_api_key(api_key);
+        let mut config = OpenAIConfig::new().with_api_key(api_key);
+
+        // Support custom base URL via env var (for testing or Azure OpenAI)
+        if let Ok(base_url) = std::env::var("OPENAI_BASE_URL") {
+            config = config.with_api_base(base_url);
+        }
+
         let client = Client::with_config(config);
 
         Self {
