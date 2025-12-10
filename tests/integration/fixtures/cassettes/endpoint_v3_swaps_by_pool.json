@@ -1,0 +1,36 @@
+{
+  "id": "chatcmpl-ClMNzI725IgPGTextBjq0BV3h1xby",
+  "object": "chat.completion",
+  "created": 1765403503,
+  "model": "gpt-4o-2024-08-06",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "```json\n{\n  \"endpoint_path\": \"/api/v3/swaps/{pool}\",\n  \"description\": \"Get swaps for a specific Uniswap V3 pool\",\n  \"method\": \"GET\",\n  \"path_params\": [\n    {\"name\": \"pool\", \"type\": \"String\", \"description\": \"The address of the Uniswap V3 pool\"}\n  ],\n  \"query_params\": [\n    {\"name\": \"limit\", \"type\": \"u32\", \"default\": 50},\n    {\"name\": \"startBlockTimestamp\", \"type\": \"Option<u64>\", \"default\": \"null\"},\n    {\"name\": \"endBlockTimestamp\", \"type\": \"Option<u64>\", \"default\": \"null\"},\n    {\"name\": \"offset\", \"type\": \"u32\", \"default\": 0}\n  ],\n  \"response_schema\": {\n    \"name\": \"SwapResponse\",\n    \"fields\": [\n      {\"name\": \"block_number\", \"type\": \"i64\", \"description\": \"Block number where the swap occurred\"},\n      {\"name\": \"block_timestamp\", \"type\": \"i64\", \"description\": \"Unix timestamp of the block\"},\n      {\"name\": \"transaction_hash\", \"type\": \"String\", \"description\": \"Transaction hash of the swap\"},\n      {\"name\": \"log_index\", \"type\": \"i32\", \"description\": \"Log index within the block\"},\n      {\"name\": \"sender\", \"type\": \"String\", \"description\": \"Address of the swap sender\"},\n      {\"name\": \"recipient\", \"type\": \"String\", \"description\": \"Address of the swap recipient\"},\n      {\"name\": \"amount0\", \"type\": \"String\", \"description\": \"Amount of token0 swapped\"},\n      {\"name\": \"amount1\", \"type\": \"String\", \"description\": \"Amount of token1 swapped\"},\n      {\"name\": \"sqrt_price_x96\", \"type\": \"String\", \"description\": \"Square root of the price after the swap\"},\n      {\"name\": \"liquidity\", \"type\": \"String\", \"description\": \"Liquidity after the swap\"},\n      {\"name\": \"tick\", \"type\": \"i32\", \"description\": \"Tick at the time of swap\"}\n    ]\n  },\n  \"sql_query\": \"SELECT block_number, block_timestamp, transaction_hash, log_index, sender, recipient, amount0::TEXT, amount1::TEXT, sqrt_price_x96::TEXT, liquidity::TEXT, tick FROM v3_pool_swaps WHERE recipient = $1 AND ($2::BIGINT IS NULL OR block_timestamp >= $2) AND ($3::BIGINT IS NULL OR block_timestamp <= $3) ORDER BY block_timestamp DESC LIMIT $4 OFFSET $5\",\n  \"tables_referenced\": [\"v3_pool_swaps\"]\n}\n```",
+        "refusal": null,
+        "annotations": []
+      },
+      "logprobs": null,
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1408,
+    "completion_tokens": 578,
+    "total_tokens": 1986,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "audio_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "audio_tokens": 0,
+      "accepted_prediction_tokens": 0,
+      "rejected_prediction_tokens": 0
+    }
+  },
+  "service_tier": "default",
+  "system_fingerprint": "fp_a4d13246c5"
+}

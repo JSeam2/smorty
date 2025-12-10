@@ -1,6 +1,7 @@
 // Integration test utilities
 use std::path::Path;
 
+pub mod endpoint_test;
 pub mod ir_generation_test;
 pub mod recording;
 

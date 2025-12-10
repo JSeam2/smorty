@@ -1,0 +1,36 @@
+{
+  "id": "chatcmpl-ClMO1SNLBPAQ42cFEpL96INedXIhp",
+  "object": "chat.completion",
+  "created": 1765403505,
+  "model": "gpt-4o-2024-08-06",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "```json\n{\n  \"endpoint_path\": \"/api/v3/volume/hourly\",\n  \"description\": \"Get hourly swap volume statistics for Uniswap V3 USDC/ETH pool\",\n  \"method\": \"GET\",\n  \"path_params\": [],\n  \"query_params\": [\n    {\"name\": \"startBlockTimestamp\", \"type\": \"Option<u64>\", \"default\": \"null\", \"description\": \"Start of the time range for the query, in Unix timestamp\"},\n    {\"name\": \"endBlockTimestamp\", \"type\": \"Option<u64>\", \"default\": \"null\", \"description\": \"End of the time range for the query, in Unix timestamp\"},\n    {\"name\": \"limit\", \"type\": \"u32\", \"default\": 50, \"description\": \"Maximum number of hourly records to return\"}\n  ],\n  \"response_schema\": {\n    \"name\": \"HourlyVolumeStatsResponse\",\n    \"fields\": [\n      {\"name\": \"hour\", \"type\": \"i64\", \"description\": \"The starting Unix timestamp of the hour\"},\n      {\"name\": \"swap_count\", \"type\": \"i64\", \"description\": \"Total number of swaps in the hour\"},\n      {\"name\": \"total_amount0\", \"type\": \"String\", \"description\": \"Sum of amount0 swapped in the hour\"},\n      {\"name\": \"total_amount1\", \"type\": \"String\", \"description\": \"Sum of amount1 swapped in the hour\"}\n    ]\n  },\n  \"sql_query\": \"SELECT DATE_TRUNC('hour', TO_TIMESTAMP(block_timestamp))::BIGINT AS hour, COUNT(*) AS swap_count, SUM(amount0) AS total_amount0, SUM(amount1) AS total_amount1 FROM v3_pool_swaps WHERE ($1::BIGINT IS NULL OR block_timestamp >= $1) AND ($2::BIGINT IS NULL OR block_timestamp <= $2) GROUP BY hour ORDER BY hour DESC LIMIT $3\",\n  \"tables_referenced\": [\"v3_pool_swaps\"]\n}\n```",
+        "refusal": null,
+        "annotations": []
+      },
+      "logprobs": null,
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1417,
+    "completion_tokens": 415,
+    "total_tokens": 1832,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "audio_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "audio_tokens": 0,
+      "accepted_prediction_tokens": 0,
+      "rejected_prediction_tokens": 0
+    }
+  },
+  "service_tier": "default",
+  "system_fingerprint": "fp_a4d13246c5"
+}

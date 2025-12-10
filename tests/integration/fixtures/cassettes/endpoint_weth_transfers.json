@@ -1,0 +1,36 @@
+{
+  "id": "chatcmpl-ClMO04ikTEAxXYTD74EnQ97ZbNDp5",
+  "object": "chat.completion",
+  "created": 1765403504,
+  "model": "gpt-4o-2024-08-06",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "```json\n{\n  \"endpoint_path\": \"/api/weth/transfers\",\n  \"description\": \"Get recent WETH transfers with optional address filtering and pagination\",\n  \"method\": \"GET\",\n  \"path_params\": [],\n  \"query_params\": [\n    {\"name\": \"address\", \"type\": \"Option<String>\", \"description\": \"Filter transfers by source or destination address\", \"default\": \"null\"},\n    {\"name\": \"limit\", \"type\": \"u32\", \"description\": \"Maximum number of transfers to return\", \"default\": 50},\n    {\"name\": \"startBlockTimestamp\", \"type\": \"Option<u64>\", \"description\": \"Filter transfers occurring after this timestamp\", \"default\": \"null\"}\n  ],\n  \"response_schema\": {\n    \"name\": \"WethTransferResponse\",\n    \"fields\": [\n      {\"name\": \"block_number\", \"type\": \"i64\", \"description\": \"Block number where the transfer occurred\"},\n      {\"name\": \"block_timestamp\", \"type\": \"i64\", \"description\": \"Unix timestamp of the block containing the transfer\"},\n      {\"name\": \"transaction_hash\", \"type\": \"String\", \"description\": \"Hash of the transaction containing the transfer\"},\n      {\"name\": \"log_index\", \"type\": \"i32\", \"description\": \"Log index within the block for the transfer event\"},\n      {\"name\": \"src\", \"type\": \"String\", \"description\": \"Source address of the transfer\"},\n      {\"name\": \"dst\", \"type\": \"String\", \"description\": \"Destination address of the transfer\"},\n      {\"name\": \"wad\", \"type\": \"String\", \"description\": \"Amount of WETH transferred\"}\n    ]\n  },\n  \"sql_query\": \"\\n    SELECT block_number, block_timestamp, transaction_hash, log_index, src, dst, wad\\n    FROM weth_transfers\\n    WHERE ($1::VARCHAR IS NULL OR src = $1 OR dst = $1)\\n    AND ($2::BIGINT IS NULL OR block_timestamp >= $2)\\n    ORDER BY block_timestamp DESC\\n    LIMIT $3\\n  \",\n  \"tables_referenced\": [\"weth_transfers\"]\n}\n```",
+        "refusal": null,
+        "annotations": []
+      },
+      "logprobs": null,
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1400,
+    "completion_tokens": 452,
+    "total_tokens": 1852,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "audio_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "audio_tokens": 0,
+      "accepted_prediction_tokens": 0,
+      "rejected_prediction_tokens": 0
+    }
+  },
+  "service_tier": "default",
+  "system_fingerprint": "fp_83554c687e"
+}

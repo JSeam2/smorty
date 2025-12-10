@@ -1,0 +1,36 @@
+{
+  "id": "chatcmpl-ClMO0UgStHJAc2SNAcO5B5KJqRFwl",
+  "object": "chat.completion",
+  "created": 1765403504,
+  "model": "gpt-4o-2024-08-06",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "```json\n{\n  \"endpoint_path\": \"/api/whales\",\n  \"description\": \"Returns addresses that have both sent WETH and received UNI tokens, showing their activity across both contracts.\",\n  \"method\": \"GET\",\n  \"path_params\": [],\n  \"query_params\": [\n    {\"name\": \"limit\", \"type\": \"u32\", \"default\": 50, \"description\": \"Maximum number of results to return\"},\n    {\"name\": \"startBlockTimestamp\", \"type\": \"Option<u64>\", \"default\": \"null\", \"description\": \"Filter results starting from this block timestamp\"},\n    {\"name\": \"endBlockTimestamp\", \"type\": \"Option<u64>\", \"default\": \"null\", \"description\": \"Filter results up to this block timestamp\"}\n  ],\n  \"response_schema\": {\n    \"name\": \"WhaleActivityResponse\",\n    \"fields\": [\n      {\"name\": \"address\", \"type\": \"String\", \"description\": \"The address active in both WETH and UNI transfers\"},\n      {\"name\": \"weth_transfer_count\", \"type\": \"i64\", \"description\": \"Number of WETH transfers made by this address\"},\n      {\"name\": \"uni_receive_count\", \"type\": \"i64\", \"description\": \"Number of UNI tokens received by this address\"}\n    ]\n  },\n  \"sql_query\": \"WITH active_weth_addresses AS ( \\\n                  SELECT src AS address, COUNT(*) AS weth_transfer_count \\\n                  FROM weth_transfers \\\n                  WHERE ($1::BIGINT IS NULL OR block_timestamp >= $1) \\\n                  AND ($2::BIGINT IS NULL OR block_timestamp <= $2) \\\n                  GROUP BY src \\\n                ), \\\n                active_uni_addresses AS ( \\\n                  SELECT to_addr AS address, COUNT(*) AS uni_receive_count \\\n                  FROM uni_transfers \\\n                  WHERE ($1::BIGINT IS NULL OR block_timestamp >= $1) \\\n                  AND ($2::BIGINT IS NULL OR block_timestamp <= $2) \\\n                  GROUP BY to_addr \\\n                ) \\\n                SELECT a.address, a.weth_transfer_count, b.uni_receive_count \\\n                FROM active_weth_addresses a \\\n                JOIN active_uni_addresses b ON a.address = b.address \\\n                ORDER BY a.weth_transfer_count + b.uni_receive_count DESC \\\n                LIMIT $3\",\n  \"tables_referenced\": [\"weth_transfers\", \"uni_transfers\"]\n}\n```",
+        "refusal": null,
+        "annotations": []
+      },
+      "logprobs": null,
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1421,
+    "completion_tokens": 496,
+    "total_tokens": 1917,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "audio_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "audio_tokens": 0,
+      "accepted_prediction_tokens": 0,
+      "rejected_prediction_tokens": 0
+    }
+  },
+  "service_tier": "default",
+  "system_fingerprint": "fp_a4d13246c5"
+}
