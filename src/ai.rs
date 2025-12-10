@@ -11,7 +11,7 @@ use async_openai::{
 use serde_json::{json, Value};
 
 /// JSON Schema for IrGenerationResult - enforces structured output
-fn ir_generation_schema() -> Value {
+pub fn ir_generation_schema() -> Value {
     json!({
         "type": "object",
         "properties": {
@@ -69,7 +69,7 @@ fn ir_generation_schema() -> Value {
 }
 
 /// JSON Schema for EndpointIrResult - enforces structured output
-fn endpoint_ir_schema() -> Value {
+pub fn endpoint_ir_schema() -> Value {
     json!({
         "type": "object",
         "properties": {

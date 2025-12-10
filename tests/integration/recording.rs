@@ -3,7 +3,8 @@
 //! Run with: OPENAI_API_KEY=sk-xxx cargo test --test integration record_ -- --ignored --nocapture
 
 use anyhow::Result;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
+use smorty::ai::{endpoint_ir_schema, ir_generation_schema};
 use std::path::Path;
 
 /// Records an OpenAI response for a given ABI and task
@@ -94,61 +95,7 @@ Please generate the IR for this indexing specification."#,
         task_description,
     );
 
-    // JSON Schema for structured output
-    let ir_schema = json!({
-        "type": "object",
-        "properties": {
-            "event_name": { "type": "string" },
-            "event_signature": { "type": "string" },
-            "start_block": { "type": "integer" },
-            "contract_address": { "type": "string" },
-            "chain": { "type": "string" },
-            "indexed_fields": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "name": { "type": "string" },
-                        "solidity_type": { "type": "string" },
-                        "rust_type": { "type": "string" },
-                        "indexed": { "type": "boolean" }
-                    },
-                    "required": ["name", "solidity_type", "rust_type", "indexed"],
-                    "additionalProperties": false
-                }
-            },
-            "table_schema": {
-                "type": "object",
-                "properties": {
-                    "table_name": { "type": "string" },
-                    "columns": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "name": { "type": "string" },
-                                "type": { "type": "string" }
-                            },
-                            "required": ["name", "type"],
-                            "additionalProperties": false
-                        }
-                    },
-                    "indexes": {
-                        "type": "array",
-                        "items": { "type": "string" }
-                    }
-                },
-                "required": ["table_name", "columns", "indexes"],
-                "additionalProperties": false
-            },
-            "description": { "type": "string" }
-        },
-        "required": [
-            "event_name", "event_signature", "start_block", "contract_address",
-            "chain", "indexed_fields", "table_schema", "description"
-        ],
-        "additionalProperties": false
-    });
+    let ir_schema = ir_generation_schema();
 
     // Make the API call with structured output
     let client = reqwest::Client::new();
@@ -449,72 +396,7 @@ Please generate the IR for this API endpoint."#,
         endpoint_path, endpoint_description, task_description, tables_info
     );
 
-    // JSON Schema for structured output
-    let endpoint_schema = json!({
-        "type": "object",
-        "properties": {
-            "endpoint_path": { "type": "string" },
-            "description": { "type": "string" },
-            "method": { "type": "string" },
-            "path_params": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "name": { "type": "string" },
-                        "type": { "type": "string" },
-                        "description": { "type": "string" }
-                    },
-                    "required": ["name", "type", "description"],
-                    "additionalProperties": false
-                }
-            },
-            "query_params": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "name": { "type": "string" },
-                        "type": { "type": "string" },
-                        "default": { "type": ["string", "number", "integer", "boolean", "null"] }
-                    },
-                    "required": ["name", "type", "default"],
-                    "additionalProperties": false
-                }
-            },
-            "response_schema": {
-                "type": "object",
-                "properties": {
-                    "name": { "type": "string" },
-                    "fields": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "name": { "type": "string" },
-                                "type": { "type": "string" },
-                                "description": { "type": "string" }
-                            },
-                            "required": ["name", "type", "description"],
-                            "additionalProperties": false
-                        }
-                    }
-                },
-                "required": ["name", "fields"],
-                "additionalProperties": false
-            },
-            "sql_query": { "type": "string" },
-            "tables_referenced": {
-                "type": "array",
-                "items": { "type": "string" }
-            }
-        },
-        "required": [
-            "endpoint_path", "description", "method", "path_params",
-            "query_params", "response_schema", "sql_query", "tables_referenced"
-        ],
-        "additionalProperties": false
-    });
+    let endpoint_schema = endpoint_ir_schema();
 
     let client = reqwest::Client::new();
     let response = client
