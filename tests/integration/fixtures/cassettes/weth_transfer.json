@@ -1,14 +1,14 @@
 {
-  "id": "chatcmpl-Ckwsgaw9O2pOuR8vFI41uKg6KLzgZ",
+  "id": "chatcmpl-ClMnKp6mWmn6ywYk7KC9bjQ4d4yh2",
   "object": "chat.completion",
-  "created": 1765305462,
+  "created": 1765405074,
   "model": "gpt-4o-2024-08-06",
   "choices": [
     {
       "index": 0,
       "message": {
         "role": "assistant",
-        "content": "```json\n{\n  \"event_name\": \"Transfer\",\n  \"event_signature\": \"Transfer(address,address,uint256)\",\n  \"start_block\": 0,\n  \"contract_address\": \"0x0000000000000000000000000000000000000001\",\n  \"chain\": \"mainnet\",\n  \"indexed_fields\": [\n    {\"name\": \"src\", \"solidity_type\": \"address\", \"rust_type\": \"String\", \"indexed\": true},\n    {\"name\": \"dst\", \"solidity_type\": \"address\", \"rust_type\": \"String\", \"indexed\": true},\n    {\"name\": \"wad\", \"solidity_type\": \"uint256\", \"rust_type\": \"String\", \"indexed\": false}\n  ],\n  \"table_schema\": {\n    \"table_name\": \"weth_transfers\",\n    \"columns\": [\n      {\"name\": \"id\", \"type\": \"BIGSERIAL PRIMARY KEY\"},\n      {\"name\": \"block_number\", \"type\": \"BIGINT NOT NULL\"},\n      {\"name\": \"block_timestamp\", \"type\": \"BIGINT NOT NULL\"},\n      {\"name\": \"transaction_hash\", \"type\": \"VARCHAR(66) NOT NULL\"},\n      {\"name\": \"log_index\", \"type\": \"INTEGER NOT NULL\"},\n      {\"name\": \"src\", \"type\": \"VARCHAR(42) NOT NULL\"},\n      {\"name\": \"dst\", \"type\": \"VARCHAR(42) NOT NULL\"},\n      {\"name\": \"wad\", \"type\": \"NUMERIC(78, 0) NOT NULL\"}\n    ],\n    \"indexes\": [\n      \"CREATE INDEX idx_block_number ON weth_transfers(block_number)\",\n      \"CREATE INDEX idx_timestamp ON weth_transfers(block_timestamp)\",\n      \"CREATE INDEX idx_src ON weth_transfers(src)\",\n      \"CREATE INDEX idx_dst ON weth_transfers(dst)\"\n    ]\n  },\n  \"description\": \"Tracks all WETH token transfers by indexing the Transfer event.\"\n}\n```",
+        "content": "{\"chain\":\"mainnet\",\"contract_address\":\"0x0000000000000000000000000000000000000001\",\"description\":\"Track all WETH token transfers\",\"event_name\":\"Transfer\",\"event_signature\":\"Transfer(address,address,uint256)\",\"indexed_fields\":[{\"indexed\":true,\"name\":\"src\",\"rust_type\":\"String\",\"solidity_type\":\"address\"},{\"indexed\":true,\"name\":\"dst\",\"rust_type\":\"String\",\"solidity_type\":\"address\"},{\"indexed\":false,\"name\":\"wad\",\"rust_type\":\"String\",\"solidity_type\":\"uint256\"}],\"start_block\":0,\"table_schema\":{\"columns\":[{\"name\":\"id\",\"type\":\"BIGSERIAL PRIMARY KEY\"},{\"name\":\"block_number\",\"type\":\"BIGINT NOT NULL\"},{\"name\":\"block_timestamp\",\"type\":\"BIGINT NOT NULL\"},{\"name\":\"transaction_hash\",\"type\":\"VARCHAR(66) NOT NULL\"},{\"name\":\"log_index\",\"type\":\"INTEGER NOT NULL\"},{\"name\":\"src\",\"type\":\"VARCHAR(42) NOT NULL\"},{\"name\":\"dst\",\"type\":\"VARCHAR(42) NOT NULL\"},{\"name\":\"wad\",\"type\":\"NUMERIC(78, 0) NOT NULL\"}],\"indexes\":[\"CREATE INDEX idx_block_number ON {table_name}(block_number)\",\"CREATE INDEX idx_timestamp ON {table_name}(block_timestamp)\"],\"table_name\":\"weth_transfer_events\"}}",
         "refusal": null,
         "annotations": []
       },
@@ -17,9 +17,9 @@
     }
   ],
   "usage": {
-    "prompt_tokens": 1873,
-    "completion_tokens": 400,
-    "total_tokens": 2273,
+    "prompt_tokens": 2051,
+    "completion_tokens": 267,
+    "total_tokens": 2318,
     "prompt_tokens_details": {
       "cached_tokens": 0,
       "audio_tokens": 0
@@ -32,5 +32,5 @@
     }
   },
   "service_tier": "default",
-  "system_fingerprint": "fp_a4d13246c5"
+  "system_fingerprint": "fp_83554c687e"
 }

@@ -107,8 +107,8 @@ async fn test_weth_transfer_ir_generation() -> Result<()> {
     assert!(field_names.contains(&"dst"));
     assert!(field_names.contains(&"wad"));
 
-    // Check table schema
-    assert_eq!(ir.table_schema.table_name, "weth_transfers");
+    // Check table schema - deterministic from recorded cassette
+    assert_eq!(ir.table_schema.table_name, "weth_transfer_events");
     assert!(!ir.table_schema.columns.is_empty());
 
     // Verify standard columns exist

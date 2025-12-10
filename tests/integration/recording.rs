@@ -94,7 +94,63 @@ Please generate the IR for this indexing specification."#,
         task_description,
     );
 
-    // Make the API call
+    // JSON Schema for structured output
+    let ir_schema = json!({
+        "type": "object",
+        "properties": {
+            "event_name": { "type": "string" },
+            "event_signature": { "type": "string" },
+            "start_block": { "type": "integer" },
+            "contract_address": { "type": "string" },
+            "chain": { "type": "string" },
+            "indexed_fields": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": { "type": "string" },
+                        "solidity_type": { "type": "string" },
+                        "rust_type": { "type": "string" },
+                        "indexed": { "type": "boolean" }
+                    },
+                    "required": ["name", "solidity_type", "rust_type", "indexed"],
+                    "additionalProperties": false
+                }
+            },
+            "table_schema": {
+                "type": "object",
+                "properties": {
+                    "table_name": { "type": "string" },
+                    "columns": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": { "type": "string" },
+                                "type": { "type": "string" }
+                            },
+                            "required": ["name", "type"],
+                            "additionalProperties": false
+                        }
+                    },
+                    "indexes": {
+                        "type": "array",
+                        "items": { "type": "string" }
+                    }
+                },
+                "required": ["table_name", "columns", "indexes"],
+                "additionalProperties": false
+            },
+            "description": { "type": "string" }
+        },
+        "required": [
+            "event_name", "event_signature", "start_block", "contract_address",
+            "chain", "indexed_fields", "table_schema", "description"
+        ],
+        "additionalProperties": false
+    });
+
+    // Make the API call with structured output
     let client = reqwest::Client::new();
     let response = client
         .post("https://api.openai.com/v1/chat/completions")
@@ -106,7 +162,15 @@ Please generate the IR for this indexing specification."#,
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            "temperature": 0.7
+            "temperature": 0.7,
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "ir_generation_result",
+                    "strict": true,
+                    "schema": ir_schema
+                }
+            }
         }))
         .send()
         .await?;
@@ -385,6 +449,73 @@ Please generate the IR for this API endpoint."#,
         endpoint_path, endpoint_description, task_description, tables_info
     );
 
+    // JSON Schema for structured output
+    let endpoint_schema = json!({
+        "type": "object",
+        "properties": {
+            "endpoint_path": { "type": "string" },
+            "description": { "type": "string" },
+            "method": { "type": "string" },
+            "path_params": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": { "type": "string" },
+                        "type": { "type": "string" },
+                        "description": { "type": "string" }
+                    },
+                    "required": ["name", "type", "description"],
+                    "additionalProperties": false
+                }
+            },
+            "query_params": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": { "type": "string" },
+                        "type": { "type": "string" },
+                        "default": { "type": ["string", "number", "integer", "boolean", "null"] }
+                    },
+                    "required": ["name", "type", "default"],
+                    "additionalProperties": false
+                }
+            },
+            "response_schema": {
+                "type": "object",
+                "properties": {
+                    "name": { "type": "string" },
+                    "fields": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": { "type": "string" },
+                                "type": { "type": "string" },
+                                "description": { "type": "string" }
+                            },
+                            "required": ["name", "type", "description"],
+                            "additionalProperties": false
+                        }
+                    }
+                },
+                "required": ["name", "fields"],
+                "additionalProperties": false
+            },
+            "sql_query": { "type": "string" },
+            "tables_referenced": {
+                "type": "array",
+                "items": { "type": "string" }
+            }
+        },
+        "required": [
+            "endpoint_path", "description", "method", "path_params",
+            "query_params", "response_schema", "sql_query", "tables_referenced"
+        ],
+        "additionalProperties": false
+    });
+
     let client = reqwest::Client::new();
     let response = client
         .post("https://api.openai.com/v1/chat/completions")
@@ -396,7 +527,15 @@ Please generate the IR for this API endpoint."#,
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            "temperature": 0.7
+            "temperature": 0.7,
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "endpoint_ir_result",
+                    "strict": true,
+                    "schema": endpoint_schema
+                }
+            }
         }))
         .send()
         .await?;
