@@ -1,0 +1,36 @@
+{
+  "id": "chatcmpl-ClMprcCrUrn1lpNDjR7Ja3uJpDT17",
+  "object": "chat.completion",
+  "created": 1765405231,
+  "model": "gpt-4o-2024-08-06",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"description\":\"Get swaps for a specific Uniswap V3 pool\",\"endpoint_path\":\"/api/v3/swaps/{pool}\",\"method\":\"GET\",\"path_params\":[{\"description\":\"The address of the Uniswap V3 pool\",\"name\":\"pool\",\"type\":\"String\"}],\"query_params\":[{\"default\":50,\"name\":\"limit\",\"type\":\"u32\"},{\"default\":\"null\",\"name\":\"startBlockTimestamp\",\"type\":\"Option<u64>\"},{\"default\":\"null\",\"name\":\"endBlockTimestamp\",\"type\":\"Option<u64>\"}],\"response_schema\":{\"fields\":[{\"description\":\"Block number where swap event occurred\",\"name\":\"block_number\",\"type\":\"i64\"},{\"description\":\"Unix timestamp of the block\",\"name\":\"block_timestamp\",\"type\":\"i64\"},{\"description\":\"Hash of the transaction\",\"name\":\"transaction_hash\",\"type\":\"String\"},{\"description\":\"Log index of the event in the block\",\"name\":\"log_index\",\"type\":\"i32\"},{\"description\":\"Address of the swap sender\",\"name\":\"sender\",\"type\":\"String\"},{\"description\":\"Address of the swap recipient\",\"name\":\"recipient\",\"type\":\"String\"},{\"description\":\"Amount of token0 swapped\",\"name\":\"amount0\",\"type\":\"String\"},{\"description\":\"Amount of token1 swapped\",\"name\":\"amount1\",\"type\":\"String\"},{\"description\":\"Square root price after the swap\",\"name\":\"sqrt_price_x96\",\"type\":\"String\"},{\"description\":\"Pool liquidity after the swap\",\"name\":\"liquidity\",\"type\":\"String\"},{\"description\":\"Tick at the time of the swap\",\"name\":\"tick\",\"type\":\"i32\"}],\"name\":\"SwapResponse\"},\"sql_query\":\"SELECT block_number, block_timestamp, transaction_hash, log_index, sender, recipient, amount0, amount1, sqrt_price_x96, liquidity, tick FROM v3_pool_swaps WHERE sender = $1 AND ($2::BIGINT IS NULL OR block_timestamp >= $2) AND ($3::BIGINT IS NULL OR block_timestamp <= $3) ORDER BY block_timestamp DESC LIMIT $4\",\"tables_referenced\":[\"v3_pool_swaps\"]}",
+        "refusal": null,
+        "annotations": []
+      },
+      "logprobs": null,
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1599,
+    "completion_tokens": 413,
+    "total_tokens": 2012,
+    "prompt_tokens_details": {
+      "cached_tokens": 1024,
+      "audio_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "audio_tokens": 0,
+      "accepted_prediction_tokens": 0,
+      "rejected_prediction_tokens": 0
+    }
+  },
+  "service_tier": "default",
+  "system_fingerprint": "fp_a4d13246c5"
+}

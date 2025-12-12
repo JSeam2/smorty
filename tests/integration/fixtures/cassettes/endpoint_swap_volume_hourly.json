@@ -1,0 +1,36 @@
+{
+  "id": "chatcmpl-ClMprhHoIqbZqJioLA1WjfNNkDgJD",
+  "object": "chat.completion",
+  "created": 1765405231,
+  "model": "gpt-4o-2024-08-06",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"description\":\"Get hourly swap volume statistics aggregated from Uniswap V3 pool swaps.\",\"endpoint_path\":\"/api/v3/volume/hourly\",\"method\":\"GET\",\"path_params\":[],\"query_params\":[{\"default\":50,\"name\":\"limit\",\"type\":\"u32\"},{\"default\":\"null\",\"name\":\"startBlockTimestamp\",\"type\":\"Option<u64>\"},{\"default\":\"null\",\"name\":\"endBlockTimestamp\",\"type\":\"Option<u64>\"}],\"response_schema\":{\"fields\":[{\"description\":\"Hour timestamp for the aggregated data\",\"name\":\"hour\",\"type\":\"i64\"},{\"description\":\"Total number of swaps in the hour\",\"name\":\"swap_count\",\"type\":\"i64\"},{\"description\":\"Total amount0 swapped in the hour\",\"name\":\"total_amount0\",\"type\":\"String\"},{\"description\":\"Total amount1 swapped in the hour\",\"name\":\"total_amount1\",\"type\":\"String\"}],\"name\":\"HourlyVolumeResponse\"},\"sql_query\":\"SELECT DATE_TRUNC('hour', TO_TIMESTAMP(block_timestamp)) AS hour, COUNT(*) AS swap_count, SUM(amount0) AS total_amount0, SUM(amount1) AS total_amount1 FROM v3_pool_swaps WHERE ($1::BIGINT IS NULL OR block_timestamp >= $1) AND ($2::BIGINT IS NULL OR block_timestamp <= $2) GROUP BY hour ORDER BY hour DESC LIMIT $3\",\"tables_referenced\":[\"v3_pool_swaps\"]}",
+        "refusal": null,
+        "annotations": []
+      },
+      "logprobs": null,
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1608,
+    "completion_tokens": 280,
+    "total_tokens": 1888,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "audio_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "audio_tokens": 0,
+      "accepted_prediction_tokens": 0,
+      "rejected_prediction_tokens": 0
+    }
+  },
+  "service_tier": "default",
+  "system_fingerprint": "fp_a4d13246c5"
+}

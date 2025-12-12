@@ -4,10 +4,138 @@ use async_openai::{
     types::{
         ChatCompletionRequestMessage, ChatCompletionRequestSystemMessageArgs,
         ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequestArgs,
+        ResponseFormat, ResponseFormatJsonSchema,
     },
     Client,
 };
-use serde_json::Value;
+use serde_json::{json, Value};
+
+/// JSON Schema for IrGenerationResult - enforces structured output
+pub fn ir_generation_schema() -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            "event_name": { "type": "string" },
+            "event_signature": { "type": "string" },
+            "start_block": { "type": "integer" },
+            "contract_address": { "type": "string" },
+            "chain": { "type": "string" },
+            "indexed_fields": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": { "type": "string" },
+                        "solidity_type": { "type": "string" },
+                        "rust_type": { "type": "string" },
+                        "indexed": { "type": "boolean" }
+                    },
+                    "required": ["name", "solidity_type", "rust_type", "indexed"],
+                    "additionalProperties": false
+                }
+            },
+            "table_schema": {
+                "type": "object",
+                "properties": {
+                    "table_name": { "type": "string" },
+                    "columns": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": { "type": "string" },
+                                "type": { "type": "string" }
+                            },
+                            "required": ["name", "type"],
+                            "additionalProperties": false
+                        }
+                    },
+                    "indexes": {
+                        "type": "array",
+                        "items": { "type": "string" }
+                    }
+                },
+                "required": ["table_name", "columns", "indexes"],
+                "additionalProperties": false
+            },
+            "description": { "type": "string" }
+        },
+        "required": [
+            "event_name", "event_signature", "start_block", "contract_address",
+            "chain", "indexed_fields", "table_schema", "description"
+        ],
+        "additionalProperties": false
+    })
+}
+
+/// JSON Schema for EndpointIrResult - enforces structured output
+pub fn endpoint_ir_schema() -> Value {
+    json!({
+        "type": "object",
+        "properties": {
+            "endpoint_path": { "type": "string" },
+            "description": { "type": "string" },
+            "method": { "type": "string" },
+            "path_params": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": { "type": "string" },
+                        "type": { "type": "string" },
+                        "description": { "type": "string" }
+                    },
+                    "required": ["name", "type", "description"],
+                    "additionalProperties": false
+                }
+            },
+            "query_params": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": { "type": "string" },
+                        "type": { "type": "string" },
+                        "default": { "type": ["string", "number", "integer", "boolean", "null"] }
+                    },
+                    "required": ["name", "type", "default"],
+                    "additionalProperties": false
+                }
+            },
+            "response_schema": {
+                "type": "object",
+                "properties": {
+                    "name": { "type": "string" },
+                    "fields": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": { "type": "string" },
+                                "type": { "type": "string" },
+                                "description": { "type": "string" }
+                            },
+                            "required": ["name", "type", "description"],
+                            "additionalProperties": false
+                        }
+                    }
+                },
+                "required": ["name", "fields"],
+                "additionalProperties": false
+            },
+            "sql_query": { "type": "string" },
+            "tables_referenced": {
+                "type": "array",
+                "items": { "type": "string" }
+            }
+        },
+        "required": [
+            "endpoint_path", "description", "method", "path_params",
+            "query_params", "response_schema", "sql_query", "tables_referenced"
+        ],
+        "additionalProperties": false
+    })
+}
 
 /// Validates and sanitizes SQL queries to catch common syntax errors
 fn validate_and_sanitize_sql(sql: &str) -> Result<String> {
@@ -55,7 +183,13 @@ pub struct AiClient {
 
 impl AiClient {
     pub fn new(api_key: String, model: String, temperature: f32) -> Self {
-        let config = OpenAIConfig::new().with_api_key(api_key);
+        let mut config = OpenAIConfig::new().with_api_key(api_key);
+
+        // Support custom base URL via env var (for testing or Azure OpenAI)
+        if let Ok(base_url) = std::env::var("OPENAI_BASE_URL") {
+            config = config.with_api_base(base_url);
+        }
+
         let client = Client::with_config(config);
 
         Self {
@@ -192,10 +326,21 @@ Please generate the IR for this indexing specification."#,
             ),
         ];
 
+        // Use structured outputs for guaranteed JSON schema compliance
+        let response_format = ResponseFormat::JsonSchema {
+            json_schema: ResponseFormatJsonSchema {
+                name: "ir_generation_result".to_string(),
+                description: Some("Intermediate representation for blockchain event indexing".to_string()),
+                schema: Some(ir_generation_schema()),
+                strict: Some(true),
+            },
+        };
+
         let request = CreateChatCompletionRequestArgs::default()
             .model(&self.model)
             .messages(messages)
             .temperature(self.temperature)
+            .response_format(response_format)
             .build()?;
 
         let response = self
@@ -211,26 +356,8 @@ Please generate the IR for this indexing specification."#,
             .and_then(|choice| choice.message.content.as_ref())
             .context("No response from AI")?;
 
-        // Parse JSON from response (handle markdown code blocks if present)
-        let json_str = if content.contains("```json") {
-            content
-                .split("```json")
-                .nth(1)
-                .and_then(|s| s.split("```").next())
-                .unwrap_or(content)
-                .trim()
-        } else if content.contains("```") {
-            content
-                .split("```")
-                .nth(1)
-                .and_then(|s| s.split("```").next())
-                .unwrap_or(content)
-                .trim()
-        } else {
-            content.trim()
-        };
-
-        let ir: IrGenerationResult = serde_json::from_str(json_str)
+        // With structured outputs, response is guaranteed valid JSON (no markdown)
+        let ir: IrGenerationResult = serde_json::from_str(content)
             .context("Failed to parse AI response as JSON")?;
 
         Ok(ir)
@@ -535,10 +662,21 @@ REMINDER - SQL Syntax Requirements:
             ),
         ];
 
+        // Use structured outputs for guaranteed JSON schema compliance
+        let response_format = ResponseFormat::JsonSchema {
+            json_schema: ResponseFormatJsonSchema {
+                name: "endpoint_ir_result".to_string(),
+                description: Some("API endpoint specification with SQL query".to_string()),
+                schema: Some(endpoint_ir_schema()),
+                strict: Some(true),
+            },
+        };
+
         let request = CreateChatCompletionRequestArgs::default()
             .model(&self.model)
             .messages(messages)
             .temperature(self.temperature)
+            .response_format(response_format)
             .build()?;
 
         let response = self
@@ -554,26 +692,8 @@ REMINDER - SQL Syntax Requirements:
             .and_then(|choice| choice.message.content.as_ref())
             .context("No response from AI")?;
 
-        // Parse JSON from response (handle markdown code blocks if present)
-        let json_str = if content.contains("```json") {
-            content
-                .split("```json")
-                .nth(1)
-                .and_then(|s| s.split("```").next())
-                .unwrap_or(content)
-                .trim()
-        } else if content.contains("```") {
-            content
-                .split("```")
-                .nth(1)
-                .and_then(|s| s.split("```").next())
-                .unwrap_or(content)
-                .trim()
-        } else {
-            content.trim()
-        };
-
-        let endpoint_ir: EndpointIrResult = serde_json::from_str(json_str)
+        // With structured outputs, response is guaranteed valid JSON (no markdown)
+        let endpoint_ir: EndpointIrResult = serde_json::from_str(content)
             .context("Failed to parse AI response as JSON")?;
 
         Ok(endpoint_ir)

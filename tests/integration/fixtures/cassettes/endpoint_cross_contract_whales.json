@@ -1,0 +1,36 @@
+{
+  "id": "chatcmpl-ClMprnrtEIcmWiK4gqpuEw7TIFPSq",
+  "object": "chat.completion",
+  "created": 1765405231,
+  "model": "gpt-4o-2024-08-06",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"description\":\"Return addresses that have both sent WETH and received UNI tokens, showing their activity across both contracts.\",\"endpoint_path\":\"/api/whales\",\"method\":\"GET\",\"path_params\":[],\"query_params\":[{\"default\":50,\"name\":\"limit\",\"type\":\"u32\"},{\"default\":\"null\",\"name\":\"startBlockTimestamp\",\"type\":\"Option<u64>\"}],\"response_schema\":{\"fields\":[{\"description\":\"Ethereum address active in both WETH and UNI transfers\",\"name\":\"address\",\"type\":\"String\"},{\"description\":\"Latest block number where the address was active in either WETH or UNI transfer\",\"name\":\"latest_block_number\",\"type\":\"i64\"},{\"description\":\"Latest Unix timestamp of the block where the address was active in either WETH or UNI transfer\",\"name\":\"latest_block_timestamp\",\"type\":\"i64\"}],\"name\":\"WhaleResponse\"},\"sql_query\":\"SELECT active_addresses.address, GREATEST(COALESCE(MAX(weth_transfers.block_number), 0), COALESCE(MAX(uni_transfers.block_number), 0)) AS latest_block_number, GREATEST(COALESCE(MAX(weth_transfers.block_timestamp), 0), COALESCE(MAX(uni_transfers.block_timestamp), 0)) AS latest_block_timestamp FROM (SELECT src AS address FROM weth_transfers UNION SELECT to_addr AS address FROM uni_transfers) AS active_addresses LEFT JOIN weth_transfers ON active_addresses.address = weth_transfers.src LEFT JOIN uni_transfers ON active_addresses.address = uni_transfers.to_addr WHERE (weth_transfers.block_timestamp >= $1 OR $1 IS NULL) OR (uni_transfers.block_timestamp >= $1 OR $1 IS NULL) GROUP BY active_addresses.address ORDER BY latest_block_timestamp DESC LIMIT $2\",\"tables_referenced\":[\"weth_transfers\",\"uni_transfers\"]}",
+        "refusal": null,
+        "annotations": []
+      },
+      "logprobs": null,
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1612,
+    "completion_tokens": 367,
+    "total_tokens": 1979,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "audio_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "audio_tokens": 0,
+      "accepted_prediction_tokens": 0,
+      "rejected_prediction_tokens": 0
+    }
+  },
+  "service_tier": "default",
+  "system_fingerprint": "fp_a4d13246c5"
+}
