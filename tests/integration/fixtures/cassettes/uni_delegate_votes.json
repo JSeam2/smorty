@@ -1,0 +1,36 @@
+{
+  "id": "chatcmpl-Cm3rBNJS3syWr9mFNIZO2YdcP98dh",
+  "object": "chat.completion",
+  "created": 1765570605,
+  "model": "gpt-4o-2024-08-06",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"chain\":\"mainnet\",\"contract_address\":\"0x0000000000000000000000000000000000000001\",\"description\":\"Tracks changes in delegate voting power, capturing when a delegate's vote balance is modified.\",\"event_name\":\"DelegateVotesChanged\",\"event_signature\":\"DelegateVotesChanged(address,uint256,uint256)\",\"indexed_fields\":[{\"indexed\":true,\"name\":\"delegate\",\"rust_type\":\"String\",\"solidity_type\":\"address\"},{\"indexed\":false,\"name\":\"previousBalance\",\"rust_type\":\"String\",\"solidity_type\":\"uint256\"},{\"indexed\":false,\"name\":\"newBalance\",\"rust_type\":\"String\",\"solidity_type\":\"uint256\"}],\"start_block\":0,\"table_schema\":{\"columns\":[{\"name\":\"id\",\"type\":\"BIGSERIAL PRIMARY KEY\"},{\"name\":\"block_number\",\"type\":\"BIGINT NOT NULL\"},{\"name\":\"block_timestamp\",\"type\":\"BIGINT NOT NULL\"},{\"name\":\"transaction_hash\",\"type\":\"VARCHAR(66) NOT NULL\"},{\"name\":\"log_index\",\"type\":\"INTEGER NOT NULL\"},{\"name\":\"delegate\",\"type\":\"VARCHAR(42) NOT NULL\"},{\"name\":\"previous_balance\",\"type\":\"NUMERIC(78, 0) NOT NULL\"},{\"name\":\"new_balance\",\"type\":\"NUMERIC(78, 0) NOT NULL\"}],\"indexes\":[\"CREATE INDEX idx_block_number ON {table_name}(block_number)\",\"CREATE INDEX idx_timestamp ON {table_name}(block_timestamp)\"],\"table_name\":\"delegate_votes_changed\"}}",
+        "refusal": null,
+        "annotations": []
+      },
+      "logprobs": null,
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 4472,
+    "completion_tokens": 290,
+    "total_tokens": 4762,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "audio_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "audio_tokens": 0,
+      "accepted_prediction_tokens": 0,
+      "rejected_prediction_tokens": 0
+    }
+  },
+  "service_tier": "default",
+  "system_fingerprint": "fp_83554c687e"
+}
