@@ -94,6 +94,7 @@ impl Migration {
         ir_results: &[(String, String, IrGenerationResult)],
     ) -> Result<SchemaState> {
         let mut state = SchemaState::new();
+        let mut _all_index_names = std::collections::HashSet::<String>::new();
 
         for (contract_name, spec_name, ir) in ir_results {
             let mut table = TableState::new(

@@ -46,3 +46,37 @@ task = """
 4. Allow a user to query startBlockTimestamp to filter results from that timestamp onward.
 5. Note that 100% is 1e18 and the swap fee percentage recorded need to be divided by 1e18 to get a human readable percentage.
 """
+
+# specifications to store in database
+[contracts.FeeManagerV3_v2_Mainnet_AAVEETH6h]
+chain = "mainnet"
+address = "0x522Eb7a9b94fC016e98e35E8562C79DDDA8Aefc0"
+abiPath = "abi/FeeManagerV3_v2.json"
+
+[[contracts.FeeManagerV3_v2_Mainnet_AAVEETH6h.specs]]
+name = "FeeUpdated"
+startBlock = 23583303
+task = """
+1. Track event FeeUpdated(uint256 swapFeePercentage).
+2. Persist swapFeePercentage with blockNumber and timestamp for a time series.
+"""
+
+[[contracts.FeeManagerV3_v2_Mainnet_AAVEETH6h.specs]]
+name = "PoolUpdated"
+startBlock = 23583303
+task = """
+1. Track event PoolUpdated(bytes32 indexed pool, uint256 swapFeePercentage).
+2. Persist swapFeePercentage with blockNumber and timestamp for a time series.
+"""
+
+[[endpoints]]
+description = "Return time series of swap fee percentage changes for a given pool address emitted by the FeeManagerV3_v2_Mainnet_AAVEETH6h contract."
+endpoint = "/mainnet/fee-manager-v3-v2/0x522Eb7a9b94fC016e98e35E8562C79DDDA8Aefc0/fee-change/{pool}"
+task = """
+1. Provide a time series of swap fee percentage changes vs block timestamp for the indexed pool address from the PoolUpdated events.
+2. Also provide a time weighted average for the past 10 periods.
+2. Default to last 50 data points if no limit is specified.
+3. Allow optional query parameter 'limit' to specify number of data points to return, cap at 200 to prevent spam.
+4. Allow a user to query startBlockTimestamp to filter results from that timestamp onward.
+5. Note that 100% is 1e18 and the swap fee percentage recorded need to be divided by 1e18 to get a human readable percentage.
+"""

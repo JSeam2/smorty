@@ -108,8 +108,8 @@ Return your response in the following JSON format:
       {"name": "field_2", "type": "VARCHAR(42) NOT NULL"}
     ],
     "indexes": [
-      "CREATE INDEX idx_block_number ON {table_name}(block_number)",
-      "CREATE INDEX idx_timestamp ON {table_name}(block_timestamp)"
+      "CREATE INDEX {table_name}_idx_block_number ON {table_name}(block_number)",
+      "CREATE INDEX {table_name}_idx_timestamp ON {table_name}(block_timestamp)"
     ]
   },
   "description": "A brief and concise description of the event to be indexed"
@@ -145,7 +145,18 @@ IMPORTANT: Table naming convention (STRICT):
 - Convert camelCase field names to snake_case: swapFeePercentage → swap_fee_percentage
 - Keep spec names concise but descriptive
 - NEVER use generic names like "pool_updated_events"
-- This prevents table collisions and PostgreSQL identifier truncation issues."#;
+- This prevents table collisions and PostgreSQL identifier truncation issues.
+
+CRITICAL: Index naming convention (STRICT):
+- ALL indexes MUST be prefixed with {table_name} placeholder to ensure global uniqueness
+- Format: "CREATE INDEX {table_name}_idx_description ON {table_name}(columns)"
+- NEVER use generic names like "idx_tx_log", "idx_block_number", or "idx_timestamp"
+- Examples:
+  * WRONG: "CREATE INDEX idx_tx_log ON {table_name}(transaction_hash, log_index)"
+  * CORRECT: "CREATE INDEX {table_name}_tx_log ON {table_name}(transaction_hash, log_index)"
+  * WRONG: "CREATE INDEX idx_pool ON {table_name}(pool)"
+  * CORRECT: "CREATE INDEX {table_name}_pool ON {table_name}(pool)"
+- This prevents index name collisions across tables in the database."#;
 
         let sblock = start_block.unwrap_or(0);
 
@@ -233,7 +244,85 @@ Please generate the IR for this indexing specification."#,
         let ir: IrGenerationResult = serde_json::from_str(json_str)
             .context("Failed to parse AI response as JSON")?;
 
+        // Validate the generated IR
+        Self::validate_ir(&ir)?;
+
         Ok(ir)
+    }
+
+    /// Validates IR to catch common AI generation mistakes
+    fn validate_ir(ir: &IrGenerationResult) -> Result<()> {
+        let table_name = &ir.table_schema.table_name;
+
+        // Check table name length (PostgreSQL limit is 63 characters)
+        if table_name.len() > 63 {
+            anyhow::bail!(
+                "Table name '{}' exceeds PostgreSQL's 63-character limit (length: {})",
+                table_name,
+                table_name.len()
+            );
+        }
+
+        // Check that indexes use {table_name} placeholder properly
+        for index in &ir.table_schema.indexes {
+            // Must contain {table_name} placeholder for the table reference
+            if !index.contains("{table_name}") {
+                anyhow::bail!(
+                    "Index definition must use '{{table_name}}' placeholder for table reference: {}",
+                    index
+                );
+            }
+
+            // Extract the index name from "CREATE INDEX <name> ON ..."
+            if let Some(idx_pos) = index.find("CREATE INDEX ") {
+                if let Some(on_pos) = index.find(" ON ") {
+                    let start = idx_pos + "CREATE INDEX ".len();
+                    let index_name = index[start..on_pos].trim();
+
+                    // The index name must be either:
+                    // 1. Start with {table_name}_ (preferred)
+                    // 2. Start with the actual table_name_ (also acceptable, will be handled by migration)
+                    // 3. Must NOT be a generic name like idx_tx_log, idx_block_number without prefix
+
+                    let has_placeholder_prefix = index_name.starts_with("{table_name}_");
+                    let has_table_prefix = index_name.starts_with(&format!("{}_", table_name));
+
+                    // List of generic index name patterns that should never appear without prefix
+                    let generic_patterns = ["idx_tx_log", "idx_block_number", "idx_timestamp",
+                                           "idx_pool_id", "idx_pool", "idx_user"];
+                    let is_generic = generic_patterns.iter().any(|pattern| index_name == *pattern);
+
+                    if !has_placeholder_prefix && !has_table_prefix && is_generic {
+                        anyhow::bail!(
+                            "Index uses generic name '{}' without table prefix. This will cause name collisions. \
+                            \nUse '{{{{table_name}}}}_' prefix to ensure uniqueness. \
+                            \nCorrect: 'CREATE INDEX {{{{table_name}}}}_idx_tx_log ON {{{{table_name}}}}(...)' \
+                            \nYour index: {}",
+                            index_name,
+                            index
+                        );
+                    }
+                }
+            }
+        }
+
+        // Check for duplicate column names
+        let mut seen_columns = std::collections::HashSet::new();
+        for col in &ir.table_schema.columns {
+            if !seen_columns.insert(&col.name) {
+                anyhow::bail!("Duplicate column name: {}", col.name);
+            }
+        }
+
+        // Validate standard columns exist
+        let required_columns = ["id", "block_number", "block_timestamp", "transaction_hash", "log_index"];
+        for required in &required_columns {
+            if !ir.table_schema.columns.iter().any(|c| c.name == *required) {
+                anyhow::bail!("Missing required column: {}", required);
+            }
+        }
+
+        Ok(())
     }
 
     /// Generate IR for an API endpoint with retry logic

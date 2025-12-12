@@ -73,7 +73,7 @@ sonic = "YOUR_SONIC_RPC_URL"
 
 # AI provider
 [ai.openai]
-model = "gpt-4"
+odel = "gpt-5-2025-08-07"
 apiKey = "YOUR_OPENAI_API_KEY"
 temperature = 0.0
 
@@ -94,7 +94,7 @@ task = """
 """
 ```
 
-Copy your abi into `abi` you may delete `./abi/FeeManagerV3_Beets.json` and `./ir/FeeManagerV3_Beets_Sonic_ETHUSD6h` as these these are for testing.
+Copy your abi into `abi` you may delete `./abi/FeeManagerV3_Beets.json` and `./abi/FeeManagerV3_v2.json` as these these are for testing.
 
 Install smorty
 ```bash

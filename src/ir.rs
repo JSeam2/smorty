@@ -54,7 +54,7 @@ impl Ir {
         Ok(())
     }
 
-    /// Generate IR for a single spec
+    /// Generate IR for a single spec with retry logic
     async fn generate_spec(
         &self,
         contract_name: &str,
@@ -62,21 +62,53 @@ impl Ir {
         spec: &SpecConfig,
         abi: &Value,
     ) -> Result<IrGenerationResult> {
-        let ir = self
-            .ai_client
-            .generate_ir(
-                contract_name,
-                &spec.name,
-                spec.start_block,
-                contract.address.as_str(),
-                contract.chain.as_str(),
-                abi,
-                &spec.task
-            )
-            .await
-            .context(format!("Failed to generate IR for spec: {}", spec.name))?;
+        const MAX_ATTEMPTS: u32 = 3;
+        let mut last_error: Option<anyhow::Error> = None;
 
-        Ok(ir)
+        for attempt in 1..=MAX_ATTEMPTS {
+            match self
+                .ai_client
+                .generate_ir(
+                    contract_name,
+                    &spec.name,
+                    spec.start_block,
+                    contract.address.as_str(),
+                    contract.chain.as_str(),
+                    abi,
+                    &spec.task,
+                )
+                .await
+            {
+                Ok(ir) => {
+                    if attempt > 1 {
+                        tracing::info!(
+                            "    Successfully generated IR on attempt {}/{}",
+                            attempt,
+                            MAX_ATTEMPTS
+                        );
+                    }
+                    return Ok(ir);
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        "    Attempt {}/{} failed: {}",
+                        attempt,
+                        MAX_ATTEMPTS,
+                        e
+                    );
+                    last_error = Some(e);
+
+                    if attempt < MAX_ATTEMPTS {
+                        tracing::info!("    Retrying...");
+                        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+                    }
+                }
+            }
+        }
+
+        Err(last_error
+            .unwrap_or_else(|| anyhow::anyhow!("Failed to generate IR after {} attempts", MAX_ATTEMPTS))
+            .context(format!("Failed to generate IR for spec: {}", spec.name)))
     }
 
     /// Save spec IR to file in the ir/specs/ directory
