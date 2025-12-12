@@ -89,5 +89,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Run tests
-        run: cargo test --all-features
+      # Run lib tests single-threaded (migration tests use set_current_dir)
+      - name: Run unit tests
+        run: cargo test --lib -- --test-threads=1
+
+      # Run integration tests (cassette-based, no external deps)
+      - name: Run integration tests
+        run: cargo test --test integration
+
+      # Run E2E tests (health/swagger - no Docker needed)
+      - name: Run E2E tests
+        run: cargo test --test e2e
