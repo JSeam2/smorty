@@ -55,10 +55,17 @@ async fn test_swagger_ui_returns_html() -> Result<()> {
         .get("content-type")
         .map(|v| v.to_str().unwrap_or(""))
         .unwrap_or("");
-    assert!(content_type.contains("text/html"), "Expected HTML, got: {}", content_type);
+    assert!(
+        content_type.contains("text/html"),
+        "Expected HTML, got: {}",
+        content_type
+    );
 
     let body = response.text().await?;
-    assert!(body.contains("swagger") || body.contains("Swagger"), "Response should contain swagger UI");
+    assert!(
+        body.contains("swagger") || body.contains("Swagger"),
+        "Response should contain swagger UI"
+    );
 
     Ok(())
 }
@@ -75,14 +82,22 @@ async fn test_openapi_spec_returns_valid_json() -> Result<()> {
     let spec: Value = response.json().await?;
 
     // Verify it's a valid OpenAPI spec
-    assert!(spec.get("openapi").is_some() || spec.get("swagger").is_some(),
-        "Response should be OpenAPI spec");
+    assert!(
+        spec.get("openapi").is_some() || spec.get("swagger").is_some(),
+        "Response should be OpenAPI spec"
+    );
     assert!(spec.get("info").is_some(), "Spec should have info section");
-    assert!(spec.get("paths").is_some(), "Spec should have paths section");
+    assert!(
+        spec.get("paths").is_some(),
+        "Spec should have paths section"
+    );
 
     // Verify health endpoint is documented
     let paths = spec.get("paths").unwrap();
-    assert!(paths.get("/health").is_some(), "Health endpoint should be documented");
+    assert!(
+        paths.get("/health").is_some(),
+        "Health endpoint should be documented"
+    );
 
     Ok(())
 }

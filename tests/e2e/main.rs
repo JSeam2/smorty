@@ -53,9 +53,9 @@ impl Drop for TestServer {
 
 /// Build minimal router for testing health/swagger endpoints
 fn build_test_router() -> axum::Router {
-    use axum::routing::get;
     use axum::Json;
     use axum::http::StatusCode;
+    use axum::routing::get;
     use serde_json::json;
     use tower_http::cors::{Any, CorsLayer};
     use utoipa_swagger_ui::SwaggerUi;
@@ -63,17 +63,21 @@ fn build_test_router() -> axum::Router {
     let mut router = axum::Router::new();
 
     // Root endpoint
-    router = router.route("/", get(|| async {
-        (StatusCode::OK, "smorty test server")
-    }));
+    router = router.route(
+        "/",
+        get(|| async { (StatusCode::OK, "smorty test server") }),
+    );
 
     // Health check
-    router = router.route("/health", get(|| async {
-        Json(json!({
-            "status": "healthy",
-            "service": "smorty-indexer"
-        }))
-    }));
+    router = router.route(
+        "/health",
+        get(|| async {
+            Json(json!({
+                "status": "healthy",
+                "service": "smorty-indexer"
+            }))
+        }),
+    );
 
     // CORS
     let cors = CorsLayer::new()
@@ -84,7 +88,8 @@ fn build_test_router() -> axum::Router {
 
     // OpenAPI spec
     let openapi_spec = build_test_openapi_spec();
-    router = router.merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", openapi_spec));
+    router =
+        router.merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", openapi_spec));
 
     router
 }
@@ -100,7 +105,7 @@ fn build_test_openapi_spec() -> utoipa::openapi::OpenApi {
             OperationBuilder::new()
                 .summary(Some("Health check".to_string()))
                 .response("200", ResponseBuilder::new().description("Healthy").build())
-                .build()
+                .build(),
         )
         .build();
 
@@ -109,12 +114,8 @@ fn build_test_openapi_spec() -> utoipa::openapi::OpenApi {
             InfoBuilder::new()
                 .title("Smorty Test API")
                 .version("0.1.0")
-                .build()
+                .build(),
         )
-        .paths(
-            PathsBuilder::new()
-                .path("/health", health_path)
-                .build()
-        )
+        .paths(PathsBuilder::new().path("/health", health_path).build())
         .build()
 }
