@@ -3,7 +3,7 @@
 //! Run with: OPENAI_API_KEY=sk-xxx cargo test --test integration record_ -- --ignored --nocapture
 
 use anyhow::Result;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use smorty::ai::{endpoint_ir_schema, ir_generation_schema};
 use std::path::Path;
 

@@ -65,16 +65,16 @@ impl SchemaState {
         let content = fs::read_to_string(path)
             .context(format!("Failed to read schema state file: {:?}", path))?;
 
-        let state: SchemaState = serde_json::from_str(&content)
-            .context("Failed to parse schema state JSON")?;
+        let state: SchemaState =
+            serde_json::from_str(&content).context("Failed to parse schema state JSON")?;
 
         Ok(state)
     }
 
     /// Save schema state to file
     pub fn save(&self, path: &Path) -> Result<()> {
-        let content = serde_json::to_string_pretty(self)
-            .context("Failed to serialize schema state")?;
+        let content =
+            serde_json::to_string_pretty(self).context("Failed to serialize schema state")?;
 
         fs::write(path, content)
             .context(format!("Failed to write schema state file: {:?}", path))?;
@@ -187,8 +187,14 @@ mod tests {
             "TestContract".to_string(),
             "TestEvent".to_string(),
         );
-        table.add_column(ColumnState::new("id".to_string(), "BIGSERIAL PRIMARY KEY".to_string()));
-        table.add_column(ColumnState::new("name".to_string(), "TEXT NOT NULL".to_string()));
+        table.add_column(ColumnState::new(
+            "id".to_string(),
+            "BIGSERIAL PRIMARY KEY".to_string(),
+        ));
+        table.add_column(ColumnState::new(
+            "name".to_string(),
+            "TEXT NOT NULL".to_string(),
+        ));
         table.add_index(IndexState::new(
             "idx_name".to_string(),
             "CREATE INDEX idx_name ON test_table(name)".to_string(),
@@ -227,8 +233,14 @@ mod tests {
         );
 
         // Add columns
-        table.add_column(ColumnState::new("id".to_string(), "BIGSERIAL PRIMARY KEY".to_string()));
-        table.add_column(ColumnState::new("email".to_string(), "TEXT NOT NULL".to_string()));
+        table.add_column(ColumnState::new(
+            "id".to_string(),
+            "BIGSERIAL PRIMARY KEY".to_string(),
+        ));
+        table.add_column(ColumnState::new(
+            "email".to_string(),
+            "TEXT NOT NULL".to_string(),
+        ));
 
         // Find columns
         assert!(table.get_column("id").is_some());

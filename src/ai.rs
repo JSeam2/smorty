@@ -1,14 +1,14 @@
 use anyhow::{Context, Result};
 use async_openai::{
+    Client,
     config::OpenAIConfig,
     types::{
         ChatCompletionRequestMessage, ChatCompletionRequestSystemMessageArgs,
-        ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequestArgs,
-        ResponseFormat, ResponseFormatJsonSchema,
+        ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequestArgs, ResponseFormat,
+        ResponseFormatJsonSchema,
     },
-    Client,
 };
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 /// JSON Schema for IrGenerationResult - enforces structured output
 pub fn ir_generation_schema() -> Value {
@@ -156,7 +156,8 @@ fn validate_and_sanitize_sql(sql: &str) -> Result<String> {
 
     // Validate basic SQL structure
     if !sanitized.trim().to_lowercase().starts_with("select")
-        && !sanitized.trim().to_lowercase().starts_with("with") {
+        && !sanitized.trim().to_lowercase().starts_with("with")
+    {
         anyhow::bail!("SQL query must start with SELECT or WITH");
     }
 
@@ -164,12 +165,18 @@ fn validate_and_sanitize_sql(sql: &str) -> Result<String> {
     let open_parens = sanitized.matches('(').count();
     let close_parens = sanitized.matches(')').count();
     if open_parens != close_parens {
-        anyhow::bail!("Unbalanced parentheses in SQL query: {} open, {} close", open_parens, close_parens);
+        anyhow::bail!(
+            "Unbalanced parentheses in SQL query: {} open, {} close",
+            open_parens,
+            close_parens
+        );
     }
 
     // Warn about potential syntax issues
     if sanitized.contains("numeric '") {
-        tracing::warn!("Found 'numeric \\'' pattern which might cause issues. Consider using CAST() or ::numeric instead");
+        tracing::warn!(
+            "Found 'numeric \\'' pattern which might cause issues. Consider using CAST() or ::numeric instead"
+        );
     }
 
     Ok(sanitized)
@@ -208,7 +215,7 @@ impl AiClient {
         contract_address: &str,
         chain: &str,
         abi: &Value,
-        task_description: &str
+        task_description: &str,
     ) -> Result<IrGenerationResult> {
         let system_prompt = r#"You are an expert Ethereum indexer code generator.
 Given a contract ABI and a natural language task description, you will:
@@ -330,7 +337,9 @@ Please generate the IR for this indexing specification."#,
         let response_format = ResponseFormat::JsonSchema {
             json_schema: ResponseFormatJsonSchema {
                 name: "ir_generation_result".to_string(),
-                description: Some("Intermediate representation for blockchain event indexing".to_string()),
+                description: Some(
+                    "Intermediate representation for blockchain event indexing".to_string(),
+                ),
                 schema: Some(ir_generation_schema()),
                 strict: Some(true),
             },
@@ -357,8 +366,8 @@ Please generate the IR for this indexing specification."#,
             .context("No response from AI")?;
 
         // With structured outputs, response is guaranteed valid JSON (no markdown)
-        let ir: IrGenerationResult = serde_json::from_str(content)
-            .context("Failed to parse AI response as JSON")?;
+        let ir: IrGenerationResult =
+            serde_json::from_str(content).context("Failed to parse AI response as JSON")?;
 
         Ok(ir)
     }
@@ -375,15 +384,21 @@ Please generate the IR for this indexing specification."#,
         let mut last_error = None;
 
         for attempt in 1..=MAX_RETRIES {
-            tracing::info!("Generating endpoint IR (attempt {}/{})", attempt, MAX_RETRIES);
+            tracing::info!(
+                "Generating endpoint IR (attempt {}/{})",
+                attempt,
+                MAX_RETRIES
+            );
 
-            let result = self.generate_endpoint_ir_internal(
-                endpoint_path,
-                endpoint_description,
-                task_description,
-                available_tables,
-                last_error.as_deref(),
-            ).await;
+            let result = self
+                .generate_endpoint_ir_internal(
+                    endpoint_path,
+                    endpoint_description,
+                    task_description,
+                    available_tables,
+                    last_error.as_deref(),
+                )
+                .await;
 
             match result {
                 Ok(mut endpoint_ir) => {
@@ -620,7 +635,10 @@ Carefully read the task description to understand:
             .join("\n\n");
 
         let error_context = if let Some(error) = previous_error {
-            format!("\n\nIMPORTANT - Previous attempt failed with error: {}\nPlease fix this issue in your response.", error)
+            format!(
+                "\n\nIMPORTANT - Previous attempt failed with error: {}\nPlease fix this issue in your response.",
+                error
+            )
         } else {
             String::new()
         };
@@ -693,8 +711,8 @@ REMINDER - SQL Syntax Requirements:
             .context("No response from AI")?;
 
         // With structured outputs, response is guaranteed valid JSON (no markdown)
-        let endpoint_ir: EndpointIrResult = serde_json::from_str(content)
-            .context("Failed to parse AI response as JSON")?;
+        let endpoint_ir: EndpointIrResult =
+            serde_json::from_str(content).context("Failed to parse AI response as JSON")?;
 
         Ok(endpoint_ir)
     }

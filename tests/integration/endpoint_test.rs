@@ -69,14 +69,38 @@ fn mock_available_tables() -> Vec<IrGenerationResult> {
             table_schema: TableSchema {
                 table_name: "weth_transfers".to_string(),
                 columns: vec![
-                    ColumnDef { name: "id".to_string(), column_type: "BIGSERIAL PRIMARY KEY".to_string() },
-                    ColumnDef { name: "block_number".to_string(), column_type: "BIGINT NOT NULL".to_string() },
-                    ColumnDef { name: "block_timestamp".to_string(), column_type: "BIGINT NOT NULL".to_string() },
-                    ColumnDef { name: "transaction_hash".to_string(), column_type: "VARCHAR(66) NOT NULL".to_string() },
-                    ColumnDef { name: "log_index".to_string(), column_type: "INTEGER NOT NULL".to_string() },
-                    ColumnDef { name: "src".to_string(), column_type: "VARCHAR(42) NOT NULL".to_string() },
-                    ColumnDef { name: "dst".to_string(), column_type: "VARCHAR(42) NOT NULL".to_string() },
-                    ColumnDef { name: "wad".to_string(), column_type: "NUMERIC(78, 0) NOT NULL".to_string() },
+                    ColumnDef {
+                        name: "id".to_string(),
+                        column_type: "BIGSERIAL PRIMARY KEY".to_string(),
+                    },
+                    ColumnDef {
+                        name: "block_number".to_string(),
+                        column_type: "BIGINT NOT NULL".to_string(),
+                    },
+                    ColumnDef {
+                        name: "block_timestamp".to_string(),
+                        column_type: "BIGINT NOT NULL".to_string(),
+                    },
+                    ColumnDef {
+                        name: "transaction_hash".to_string(),
+                        column_type: "VARCHAR(66) NOT NULL".to_string(),
+                    },
+                    ColumnDef {
+                        name: "log_index".to_string(),
+                        column_type: "INTEGER NOT NULL".to_string(),
+                    },
+                    ColumnDef {
+                        name: "src".to_string(),
+                        column_type: "VARCHAR(42) NOT NULL".to_string(),
+                    },
+                    ColumnDef {
+                        name: "dst".to_string(),
+                        column_type: "VARCHAR(42) NOT NULL".to_string(),
+                    },
+                    ColumnDef {
+                        name: "wad".to_string(),
+                        column_type: "NUMERIC(78, 0) NOT NULL".to_string(),
+                    },
                 ],
                 indexes: vec![],
             },
@@ -111,14 +135,38 @@ fn mock_available_tables() -> Vec<IrGenerationResult> {
             table_schema: TableSchema {
                 table_name: "uni_transfers".to_string(),
                 columns: vec![
-                    ColumnDef { name: "id".to_string(), column_type: "BIGSERIAL PRIMARY KEY".to_string() },
-                    ColumnDef { name: "block_number".to_string(), column_type: "BIGINT NOT NULL".to_string() },
-                    ColumnDef { name: "block_timestamp".to_string(), column_type: "BIGINT NOT NULL".to_string() },
-                    ColumnDef { name: "transaction_hash".to_string(), column_type: "VARCHAR(66) NOT NULL".to_string() },
-                    ColumnDef { name: "log_index".to_string(), column_type: "INTEGER NOT NULL".to_string() },
-                    ColumnDef { name: "from_addr".to_string(), column_type: "VARCHAR(42) NOT NULL".to_string() },
-                    ColumnDef { name: "to_addr".to_string(), column_type: "VARCHAR(42) NOT NULL".to_string() },
-                    ColumnDef { name: "value".to_string(), column_type: "NUMERIC(78, 0) NOT NULL".to_string() },
+                    ColumnDef {
+                        name: "id".to_string(),
+                        column_type: "BIGSERIAL PRIMARY KEY".to_string(),
+                    },
+                    ColumnDef {
+                        name: "block_number".to_string(),
+                        column_type: "BIGINT NOT NULL".to_string(),
+                    },
+                    ColumnDef {
+                        name: "block_timestamp".to_string(),
+                        column_type: "BIGINT NOT NULL".to_string(),
+                    },
+                    ColumnDef {
+                        name: "transaction_hash".to_string(),
+                        column_type: "VARCHAR(66) NOT NULL".to_string(),
+                    },
+                    ColumnDef {
+                        name: "log_index".to_string(),
+                        column_type: "INTEGER NOT NULL".to_string(),
+                    },
+                    ColumnDef {
+                        name: "from_addr".to_string(),
+                        column_type: "VARCHAR(42) NOT NULL".to_string(),
+                    },
+                    ColumnDef {
+                        name: "to_addr".to_string(),
+                        column_type: "VARCHAR(42) NOT NULL".to_string(),
+                    },
+                    ColumnDef {
+                        name: "value".to_string(),
+                        column_type: "NUMERIC(78, 0) NOT NULL".to_string(),
+                    },
                 ],
                 indexes: vec![],
             },
@@ -126,7 +174,8 @@ fn mock_available_tables() -> Vec<IrGenerationResult> {
         },
         IrGenerationResult {
             event_name: "Swap".to_string(),
-            event_signature: "Swap(address,address,int256,int256,uint160,uint128,int24)".to_string(),
+            event_signature: "Swap(address,address,int256,int256,uint160,uint128,int24)"
+                .to_string(),
             start_block: 0,
             contract_address: "0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640".to_string(),
             chain: "mainnet".to_string(),
@@ -147,18 +196,54 @@ fn mock_available_tables() -> Vec<IrGenerationResult> {
             table_schema: TableSchema {
                 table_name: "v3_pool_swaps".to_string(),
                 columns: vec![
-                    ColumnDef { name: "id".to_string(), column_type: "BIGSERIAL PRIMARY KEY".to_string() },
-                    ColumnDef { name: "block_number".to_string(), column_type: "BIGINT NOT NULL".to_string() },
-                    ColumnDef { name: "block_timestamp".to_string(), column_type: "BIGINT NOT NULL".to_string() },
-                    ColumnDef { name: "transaction_hash".to_string(), column_type: "VARCHAR(66) NOT NULL".to_string() },
-                    ColumnDef { name: "log_index".to_string(), column_type: "INTEGER NOT NULL".to_string() },
-                    ColumnDef { name: "sender".to_string(), column_type: "VARCHAR(42) NOT NULL".to_string() },
-                    ColumnDef { name: "recipient".to_string(), column_type: "VARCHAR(42) NOT NULL".to_string() },
-                    ColumnDef { name: "amount0".to_string(), column_type: "NUMERIC(78, 0) NOT NULL".to_string() },
-                    ColumnDef { name: "amount1".to_string(), column_type: "NUMERIC(78, 0) NOT NULL".to_string() },
-                    ColumnDef { name: "sqrt_price_x96".to_string(), column_type: "NUMERIC(78, 0) NOT NULL".to_string() },
-                    ColumnDef { name: "liquidity".to_string(), column_type: "NUMERIC(39, 0) NOT NULL".to_string() },
-                    ColumnDef { name: "tick".to_string(), column_type: "INTEGER NOT NULL".to_string() },
+                    ColumnDef {
+                        name: "id".to_string(),
+                        column_type: "BIGSERIAL PRIMARY KEY".to_string(),
+                    },
+                    ColumnDef {
+                        name: "block_number".to_string(),
+                        column_type: "BIGINT NOT NULL".to_string(),
+                    },
+                    ColumnDef {
+                        name: "block_timestamp".to_string(),
+                        column_type: "BIGINT NOT NULL".to_string(),
+                    },
+                    ColumnDef {
+                        name: "transaction_hash".to_string(),
+                        column_type: "VARCHAR(66) NOT NULL".to_string(),
+                    },
+                    ColumnDef {
+                        name: "log_index".to_string(),
+                        column_type: "INTEGER NOT NULL".to_string(),
+                    },
+                    ColumnDef {
+                        name: "sender".to_string(),
+                        column_type: "VARCHAR(42) NOT NULL".to_string(),
+                    },
+                    ColumnDef {
+                        name: "recipient".to_string(),
+                        column_type: "VARCHAR(42) NOT NULL".to_string(),
+                    },
+                    ColumnDef {
+                        name: "amount0".to_string(),
+                        column_type: "NUMERIC(78, 0) NOT NULL".to_string(),
+                    },
+                    ColumnDef {
+                        name: "amount1".to_string(),
+                        column_type: "NUMERIC(78, 0) NOT NULL".to_string(),
+                    },
+                    ColumnDef {
+                        name: "sqrt_price_x96".to_string(),
+                        column_type: "NUMERIC(78, 0) NOT NULL".to_string(),
+                    },
+                    ColumnDef {
+                        name: "liquidity".to_string(),
+                        column_type: "NUMERIC(39, 0) NOT NULL".to_string(),
+                    },
+                    ColumnDef {
+                        name: "tick".to_string(),
+                        column_type: "INTEGER NOT NULL".to_string(),
+                    },
                 ],
                 indexes: vec![],
             },
@@ -198,7 +283,11 @@ async fn test_endpoint_weth_transfers() -> Result<()> {
     // Verify endpoint structure
     assert_eq!(endpoint.endpoint_path, "/api/weth/transfers");
     assert_eq!(endpoint.method, "GET");
-    assert!(endpoint.tables_referenced.contains(&"weth_transfers".to_string()));
+    assert!(
+        endpoint
+            .tables_referenced
+            .contains(&"weth_transfers".to_string())
+    );
 
     // Verify SQL is present and references the table
     assert!(endpoint.sql_query.to_lowercase().contains("weth_transfers"));
@@ -257,8 +346,16 @@ async fn test_endpoint_cross_contract_whales() -> Result<()> {
         endpoint.tables_referenced.len() >= 2,
         "Cross-contract query should reference multiple tables"
     );
-    assert!(endpoint.tables_referenced.contains(&"weth_transfers".to_string()));
-    assert!(endpoint.tables_referenced.contains(&"uni_transfers".to_string()));
+    assert!(
+        endpoint
+            .tables_referenced
+            .contains(&"weth_transfers".to_string())
+    );
+    assert!(
+        endpoint
+            .tables_referenced
+            .contains(&"uni_transfers".to_string())
+    );
 
     // Verify SQL uses JOIN or subqueries to combine tables
     let sql_lower = endpoint.sql_query.to_lowercase();
@@ -300,7 +397,10 @@ async fn test_endpoint_swap_volume_hourly() -> Result<()> {
 
     // Verify aggregation SQL patterns
     let sql_lower = endpoint.sql_query.to_lowercase();
-    assert!(sql_lower.contains("group by"), "Aggregation query should GROUP BY");
+    assert!(
+        sql_lower.contains("group by"),
+        "Aggregation query should GROUP BY"
+    );
     assert!(
         sql_lower.contains("date_trunc") || sql_lower.contains("extract"),
         "Hourly aggregation should use DATE_TRUNC or EXTRACT"
@@ -346,10 +446,7 @@ async fn test_endpoint_v3_swaps_by_pool() -> Result<()> {
         !endpoint.path_params.is_empty(),
         "Should have path parameters for {{pool}}"
     );
-    assert!(endpoint
-        .path_params
-        .iter()
-        .any(|p| p.name == "pool"));
+    assert!(endpoint.path_params.iter().any(|p| p.name == "pool"));
 
     // Verify SQL uses parameterized query
     assert!(
