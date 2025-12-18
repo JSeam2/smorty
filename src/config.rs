@@ -58,11 +58,9 @@ pub struct EndpointConfig {
 impl Config {
     /// Load configuration from a TOML file
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let content = fs::read_to_string(path.as_ref())
-            .context("Failed to read config file")?;
+        let content = fs::read_to_string(path.as_ref()).context("Failed to read config file")?;
 
-        let config: Config = toml::from_str(&content)
-            .context("Failed to parse config TOML")?;
+        let config: Config = toml::from_str(&content).context("Failed to parse config TOML")?;
 
         config.validate()?;
 
@@ -101,7 +99,8 @@ impl Config {
 
     /// Get RPC URL for a chain
     pub fn get_rpc_url(&self, chain: &str) -> Result<&String> {
-        self.chains.get(chain)
+        self.chains
+            .get(chain)
             .ok_or_else(|| anyhow::anyhow!("Chain '{}' not found in config", chain))
     }
 }

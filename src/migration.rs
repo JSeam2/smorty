@@ -51,16 +51,13 @@ impl Migration {
         // Create backup of old schema state if it exists
         if state_file.exists() {
             let backup_file = migrations_dir.join(format!("{}_schema.json", timestamp));
-            fs::copy(&state_file, &backup_file)
-                .context("Failed to create schema backup")?;
+            fs::copy(&state_file, &backup_file).context("Failed to create schema backup")?;
 
             tracing::info!(
                 "Created schema backup: {:?}",
                 backup_file.file_name().unwrap()
             );
-            tracing::info!(
-                "This backup is for recovery purposes in case the new migration fails."
-            );
+            tracing::info!("This backup is for recovery purposes in case the new migration fails.");
             tracing::info!(
                 "You can safely delete old schema backups once migrations are verified to work correctly."
             );
@@ -77,8 +74,7 @@ impl Migration {
         };
         let migration_file = migrations_dir.join(format!("{}_{}.sql", timestamp, description));
 
-        fs::write(&migration_file, migration_sql)
-            .context("Failed to write migration file")?;
+        fs::write(&migration_file, migration_sql).context("Failed to write migration file")?;
 
         // Save new schema state
         new_state.save(&state_file)?;
@@ -116,7 +112,8 @@ impl Migration {
                 let index_sql = index_sql.replace("{table_name}", &ir.table_schema.table_name);
 
                 // Make index names unique by prefixing with table name
-                let index_sql = Self::make_index_name_unique(&index_sql, &ir.table_schema.table_name);
+                let index_sql =
+                    Self::make_index_name_unique(&index_sql, &ir.table_schema.table_name);
 
                 // Extract index name
                 let index_name = IndexState::extract_index_name(&index_sql)
@@ -136,7 +133,10 @@ impl Migration {
         let mut sql = String::new();
 
         sql.push_str("-- Auto-generated migration from IR\n");
-        sql.push_str(&format!("-- Generated at: {}\n\n", chrono::Utc::now().to_rfc3339()));
+        sql.push_str(&format!(
+            "-- Generated at: {}\n\n",
+            chrono::Utc::now().to_rfc3339()
+        ));
 
         // Handle new tables (initial migration or new tables added)
         if !diff.tables_added.is_empty() {
@@ -196,7 +196,9 @@ impl Migration {
 
             if has_not_null {
                 // Generate warning for NOT NULL columns being added to existing tables
-                sql.push_str("-- WARNING: Adding NOT NULL column to existing table with data will fail\n");
+                sql.push_str(
+                    "-- WARNING: Adding NOT NULL column to existing table with data will fail\n",
+                );
                 sql.push_str(&format!(
                     "-- You must manually decide how to handle this. Options:\n"
                 ));
@@ -217,9 +219,7 @@ impl Migration {
                     "--    ALTER TABLE {} ALTER COLUMN {} SET NOT NULL;\n",
                     table_diff.table_name, column.name
                 ));
-                sql.push_str(&format!(
-                    "-- 2. Add column with a DEFAULT value:\n"
-                ));
+                sql.push_str(&format!("-- 2. Add column with a DEFAULT value:\n"));
                 sql.push_str(&format!(
                     "--    ALTER TABLE {} ADD COLUMN IF NOT EXISTS {} {} DEFAULT <default_value>;\n",
                     table_diff.table_name, column.name, column.column_type
@@ -726,8 +726,15 @@ mod tests {
         let parts: Vec<&str> = filename_str.split('_').collect();
 
         // First part should be 14-digit timestamp
-        assert_eq!(parts[0].len(), 14, "Timestamp should be 14 digits (YYYYMMDDHHmmss)");
-        assert!(parts[0].chars().all(|c| c.is_ascii_digit()), "Timestamp should be all digits");
+        assert_eq!(
+            parts[0].len(),
+            14,
+            "Timestamp should be 14 digits (YYYYMMDDHHmmss)"
+        );
+        assert!(
+            parts[0].chars().all(|c| c.is_ascii_digit()),
+            "Timestamp should be all digits"
+        );
 
         // Should end with .sql
         assert!(filename_str.ends_with(".sql"));
@@ -797,7 +804,10 @@ mod tests {
 
         let mut initial_ir = create_mock_ir("testcontract_testevent", "TestEvent");
         // Remove the "amount" column for initial state
-        initial_ir.table_schema.columns.retain(|c| c.name != "amount");
+        initial_ir
+            .table_schema
+            .columns
+            .retain(|c| c.name != "amount");
         let ir_json = serde_json::to_string_pretty(&initial_ir).unwrap();
         fs::write(ir_dir.join("TestEvent.json"), ir_json).unwrap();
 
@@ -819,13 +829,19 @@ mod tests {
             .filter(|e| e.file_name().to_str().unwrap().contains("schema_update"))
             .collect();
 
-        assert_eq!(migration_files.len(), 1, "Should have one schema_update migration");
+        assert_eq!(
+            migration_files.len(),
+            1,
+            "Should have one schema_update migration"
+        );
 
         let contents = fs::read_to_string(migration_files[0].path()).unwrap();
 
         // Verify warning is present
         assert!(
-            contents.contains("-- WARNING: Adding NOT NULL column to existing table with data will fail"),
+            contents.contains(
+                "-- WARNING: Adding NOT NULL column to existing table with data will fail"
+            ),
             "Should contain warning about NOT NULL column"
         );
         assert!(
@@ -851,7 +867,9 @@ mod tests {
             "Should have commented UPDATE statement"
         );
         assert!(
-            contents.contains("--    ALTER TABLE testcontract_testevent ALTER COLUMN amount SET NOT NULL"),
+            contents.contains(
+                "--    ALTER TABLE testcontract_testevent ALTER COLUMN amount SET NOT NULL"
+            ),
             "Should have commented SET NOT NULL statement"
         );
 
@@ -896,7 +914,9 @@ mod tests {
 
         // Verify no warning for nullable column
         assert!(
-            contents.contains("ALTER TABLE testcontract_testevent ADD COLUMN IF NOT EXISTS optional_field TEXT;"),
+            contents.contains(
+                "ALTER TABLE testcontract_testevent ADD COLUMN IF NOT EXISTS optional_field TEXT;"
+            ),
             "Should have uncommented ALTER TABLE for nullable column"
         );
         assert!(
@@ -1055,16 +1075,16 @@ mod tests {
         let migration_files: Vec<_> = fs::read_dir("migrations")
             .unwrap()
             .filter_map(|e| e.ok())
-            .filter(|e| e.file_name().to_str().unwrap().contains("schema_update.sql"))
+            .filter(|e| {
+                e.file_name()
+                    .to_str()
+                    .unwrap()
+                    .contains("schema_update.sql")
+            })
             .collect();
 
         let migration_name = migration_files[0].file_name();
-        let migration_timestamp = migration_name
-            .to_str()
-            .unwrap()
-            .split('_')
-            .next()
-            .unwrap();
+        let migration_timestamp = migration_name.to_str().unwrap().split('_').next().unwrap();
 
         // Find the backup file
         let backup_files: Vec<_> = fs::read_dir("migrations")

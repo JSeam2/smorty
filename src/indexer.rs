@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
-use tokio::time::{interval, Duration};
+use tokio::time::{Duration, interval};
 
 /// Represents a single event spec to index
 #[derive(Debug, Clone)]
@@ -109,11 +109,7 @@ impl Indexer {
             let rpc_url = self.config.get_rpc_url(&chain)?.clone();
 
             // Find minimum start block across all specs for this chain
-            let min_start_block = specs
-                .iter()
-                .map(|s| s.ir.start_block)
-                .min()
-                .unwrap_or(0);
+            let min_start_block = specs.iter().map(|s| s.ir.start_block).min().unwrap_or(0);
 
             groups.push(ChainGroup {
                 chain,
@@ -185,6 +181,7 @@ impl Indexer {
         }
 
         // Wait for all tasks (they should run forever)
+        #[allow(clippy::never_loop)] // Intentional: daemon tasks run forever
         for task in tasks {
             task.await?;
         }
@@ -268,8 +265,8 @@ impl Indexer {
         // Build a map of contract addresses to their specs
         let mut contract_spec_map: HashMap<Address, Vec<&IndexSpec>> = HashMap::new();
         for spec in &group.specs {
-            let address = Address::from_str(&spec.ir.contract_address)
-                .context("Invalid contract address")?;
+            let address =
+                Address::from_str(&spec.ir.contract_address).context("Invalid contract address")?;
             contract_spec_map
                 .entry(address)
                 .or_insert_with(Vec::new)
@@ -551,7 +548,8 @@ impl Indexer {
                 self.format_topic_value(&topic, &field.solidity_type)?
             } else {
                 // Non-indexed field - get from data
-                let value = self.extract_data_value(&data, &mut data_offset, &field.solidity_type)?;
+                let value =
+                    self.extract_data_value(&data, &mut data_offset, &field.solidity_type)?;
                 value
             };
 
