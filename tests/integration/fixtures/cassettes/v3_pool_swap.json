@@ -1,0 +1,36 @@
+{
+  "id": "chatcmpl-Cm3s7XDByRcf3VGNDtwc3qkK8EAkq",
+  "object": "chat.completion",
+  "created": 1765570663,
+  "model": "gpt-4o-2024-08-06",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"chain\":\"mainnet\",\"contract_address\":\"0x0000000000000000000000000000000000000001\",\"description\":\"Indexes all swap events on the Uniswap V3 pool, capturing details of each swap including sender, recipient, amounts, price, liquidity, and tick.\",\"event_name\":\"Swap\",\"event_signature\":\"Swap(address,address,int256,int256,uint160,uint128,int24)\",\"indexed_fields\":[{\"indexed\":true,\"name\":\"sender\",\"rust_type\":\"String\",\"solidity_type\":\"address\"},{\"indexed\":true,\"name\":\"recipient\",\"rust_type\":\"String\",\"solidity_type\":\"address\"},{\"indexed\":false,\"name\":\"amount0\",\"rust_type\":\"String\",\"solidity_type\":\"int256\"},{\"indexed\":false,\"name\":\"amount1\",\"rust_type\":\"String\",\"solidity_type\":\"int256\"},{\"indexed\":false,\"name\":\"sqrtPriceX96\",\"rust_type\":\"String\",\"solidity_type\":\"uint160\"},{\"indexed\":false,\"name\":\"liquidity\",\"rust_type\":\"String\",\"solidity_type\":\"uint128\"},{\"indexed\":false,\"name\":\"tick\",\"rust_type\":\"String\",\"solidity_type\":\"int24\"}],\"start_block\":0,\"table_schema\":{\"columns\":[{\"name\":\"id\",\"type\":\"BIGSERIAL PRIMARY KEY\"},{\"name\":\"block_number\",\"type\":\"BIGINT NOT NULL\"},{\"name\":\"block_timestamp\",\"type\":\"BIGINT NOT NULL\"},{\"name\":\"transaction_hash\",\"type\":\"VARCHAR(66) NOT NULL\"},{\"name\":\"log_index\",\"type\":\"INTEGER NOT NULL\"},{\"name\":\"sender\",\"type\":\"VARCHAR(42) NOT NULL\"},{\"name\":\"recipient\",\"type\":\"VARCHAR(42) NOT NULL\"},{\"name\":\"amount0\",\"type\":\"NUMERIC(78, 0) NOT NULL\"},{\"name\":\"amount1\",\"type\":\"NUMERIC(78, 0) NOT NULL\"},{\"name\":\"sqrt_price_x96\",\"type\":\"NUMERIC(78, 0) NOT NULL\"},{\"name\":\"liquidity\",\"type\":\"NUMERIC(39, 0) NOT NULL\"},{\"name\":\"tick\",\"type\":\"INTEGER NOT NULL\"}],\"indexes\":[\"CREATE INDEX idx_block_number ON {table_name}(block_number)\",\"CREATE INDEX idx_sender ON {table_name}(sender)\",\"CREATE INDEX idx_recipient ON {table_name}(recipient)\",\"CREATE INDEX idx_transaction_hash ON {table_name}(transaction_hash)\"],\"table_name\":\"uniswap_v3_swaps\"}}",
+        "refusal": null,
+        "annotations": []
+      },
+      "logprobs": null,
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 6168,
+    "completion_tokens": 482,
+    "total_tokens": 6650,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "audio_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "audio_tokens": 0,
+      "accepted_prediction_tokens": 0,
+      "rejected_prediction_tokens": 0
+    }
+  },
+  "service_tier": "default",
+  "system_fingerprint": "fp_83554c687e"
+}

@@ -1,0 +1,36 @@
+{
+  "id": "chatcmpl-Cm3sStqdsC9ujhIsrhvv0O992r6Ss",
+  "object": "chat.completion",
+  "created": 1765570684,
+  "model": "gpt-4o-2024-08-06",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"chain\":\"mainnet\",\"contract_address\":\"0x0000000000000000000000000000000000000001\",\"description\":\"Tracks liquidity additions (Mint events) to the Uniswap V3 Pool.\",\"event_name\":\"Mint\",\"event_signature\":\"Mint(address,address,int24,int24,uint128,uint256,uint256)\",\"indexed_fields\":[{\"indexed\":false,\"name\":\"sender\",\"rust_type\":\"String\",\"solidity_type\":\"address\"},{\"indexed\":true,\"name\":\"owner\",\"rust_type\":\"String\",\"solidity_type\":\"address\"},{\"indexed\":true,\"name\":\"tickLower\",\"rust_type\":\"String\",\"solidity_type\":\"int24\"},{\"indexed\":true,\"name\":\"tickUpper\",\"rust_type\":\"String\",\"solidity_type\":\"int24\"},{\"indexed\":false,\"name\":\"amount\",\"rust_type\":\"String\",\"solidity_type\":\"uint128\"},{\"indexed\":false,\"name\":\"amount0\",\"rust_type\":\"String\",\"solidity_type\":\"uint256\"},{\"indexed\":false,\"name\":\"amount1\",\"rust_type\":\"String\",\"solidity_type\":\"uint256\"}],\"start_block\":0,\"table_schema\":{\"columns\":[{\"name\":\"id\",\"type\":\"BIGSERIAL PRIMARY KEY\"},{\"name\":\"block_number\",\"type\":\"BIGINT NOT NULL\"},{\"name\":\"block_timestamp\",\"type\":\"BIGINT NOT NULL\"},{\"name\":\"transaction_hash\",\"type\":\"VARCHAR(66) NOT NULL\"},{\"name\":\"log_index\",\"type\":\"INTEGER NOT NULL\"},{\"name\":\"sender\",\"type\":\"VARCHAR(42) NOT NULL\"},{\"name\":\"owner\",\"type\":\"VARCHAR(42) NOT NULL\"},{\"name\":\"tick_lower\",\"type\":\"INTEGER NOT NULL\"},{\"name\":\"tick_upper\",\"type\":\"INTEGER NOT NULL\"},{\"name\":\"amount\",\"type\":\"NUMERIC(39, 0) NOT NULL\"},{\"name\":\"amount0\",\"type\":\"NUMERIC(78, 0) NOT NULL\"},{\"name\":\"amount1\",\"type\":\"NUMERIC(78, 0) NOT NULL\"}],\"indexes\":[\"CREATE INDEX idx_block_number ON {table_name}(block_number)\",\"CREATE INDEX idx_timestamp ON {table_name}(block_timestamp)\"],\"table_name\":\"mint_events\"}}",
+        "refusal": null,
+        "annotations": []
+      },
+      "logprobs": null,
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 6168,
+    "completion_tokens": 423,
+    "total_tokens": 6591,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "audio_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "audio_tokens": 0,
+      "accepted_prediction_tokens": 0,
+      "rejected_prediction_tokens": 0
+    }
+  },
+  "service_tier": "default",
+  "system_fingerprint": "fp_83554c687e"
+}

@@ -39,7 +39,8 @@ impl SchemaDiff {
 
         // Find added and dropped tables
         let added_table_names: Vec<String> = new_tables.difference(&old_tables).cloned().collect();
-        let dropped_table_names: Vec<String> = old_tables.difference(&new_tables).cloned().collect();
+        let dropped_table_names: Vec<String> =
+            old_tables.difference(&new_tables).cloned().collect();
 
         let tables_added: Vec<TableState> = added_table_names
             .iter()
@@ -49,7 +50,8 @@ impl SchemaDiff {
         let tables_dropped = dropped_table_names;
 
         // Find modified tables (tables that exist in both states)
-        let common_tables: HashSet<String> = old_tables.intersection(&new_tables).cloned().collect();
+        let common_tables: HashSet<String> =
+            old_tables.intersection(&new_tables).cloned().collect();
         let mut tables_modified = Vec::new();
 
         for table_name in common_tables {
@@ -107,13 +109,14 @@ impl SchemaDiff {
             .filter_map(|name| new_columns.get(name).map(|c| (*c).clone()))
             .collect();
 
-        let columns_dropped: Vec<String> = old_col_names
-            .difference(&new_col_names)
-            .cloned()
-            .collect();
+        let columns_dropped: Vec<String> =
+            old_col_names.difference(&new_col_names).cloned().collect();
 
         // Check for modified columns (same name, different type)
-        let common_columns: HashSet<String> = old_col_names.intersection(&new_col_names).cloned().collect();
+        let common_columns: HashSet<String> = old_col_names
+            .intersection(&new_col_names)
+            .cloned()
+            .collect();
         let mut columns_modified = Vec::new();
 
         for col_name in common_columns {
@@ -138,10 +141,8 @@ impl SchemaDiff {
             .filter_map(|name| new_indexes.get(name).map(|i| (*i).clone()))
             .collect();
 
-        let indexes_dropped: Vec<String> = old_idx_names
-            .difference(&new_idx_names)
-            .cloned()
-            .collect();
+        let indexes_dropped: Vec<String> =
+            old_idx_names.difference(&new_idx_names).cloned().collect();
 
         TableDiff {
             table_name: new_table.name.clone(),
@@ -184,7 +185,11 @@ mod tests {
     use super::*;
     use crate::schema_state::TableSource;
 
-    fn create_test_table(name: &str, columns: Vec<(&str, &str)>, indexes: Vec<(&str, &str)>) -> TableState {
+    fn create_test_table(
+        name: &str,
+        columns: Vec<(&str, &str)>,
+        indexes: Vec<(&str, &str)>,
+    ) -> TableState {
         let mut table = TableState {
             name: name.to_string(),
             source: TableSource {
@@ -251,11 +256,7 @@ mod tests {
     #[test]
     fn test_table_dropped() {
         let mut old_state = SchemaState::new();
-        let table = create_test_table(
-            "users",
-            vec![("id", "BIGSERIAL PRIMARY KEY")],
-            vec![],
-        );
+        let table = create_test_table("users", vec![("id", "BIGSERIAL PRIMARY KEY")], vec![]);
         old_state.add_table(table);
 
         let new_state = SchemaState::new();
@@ -272,20 +273,13 @@ mod tests {
     #[test]
     fn test_column_added() {
         let mut old_state = SchemaState::new();
-        let old_table = create_test_table(
-            "users",
-            vec![("id", "BIGSERIAL PRIMARY KEY")],
-            vec![],
-        );
+        let old_table = create_test_table("users", vec![("id", "BIGSERIAL PRIMARY KEY")], vec![]);
         old_state.add_table(old_table);
 
         let mut new_state = SchemaState::new();
         let new_table = create_test_table(
             "users",
-            vec![
-                ("id", "BIGSERIAL PRIMARY KEY"),
-                ("email", "TEXT NOT NULL"),
-            ],
+            vec![("id", "BIGSERIAL PRIMARY KEY"), ("email", "TEXT NOT NULL")],
             vec![],
         );
         new_state.add_table(new_table);
@@ -307,20 +301,13 @@ mod tests {
         let mut old_state = SchemaState::new();
         let old_table = create_test_table(
             "users",
-            vec![
-                ("id", "BIGSERIAL PRIMARY KEY"),
-                ("email", "TEXT NOT NULL"),
-            ],
+            vec![("id", "BIGSERIAL PRIMARY KEY"), ("email", "TEXT NOT NULL")],
             vec![],
         );
         old_state.add_table(old_table);
 
         let mut new_state = SchemaState::new();
-        let new_table = create_test_table(
-            "users",
-            vec![("id", "BIGSERIAL PRIMARY KEY")],
-            vec![],
-        );
+        let new_table = create_test_table("users", vec![("id", "BIGSERIAL PRIMARY KEY")], vec![]);
         new_state.add_table(new_table);
 
         let diff = SchemaDiff::compute(&old_state, &new_state);
@@ -439,11 +426,7 @@ mod tests {
             vec![("id", "BIGSERIAL PRIMARY KEY"), ("name", "TEXT NOT NULL")],
             vec![],
         );
-        let old_table2 = create_test_table(
-            "posts",
-            vec![("id", "BIGSERIAL PRIMARY KEY")],
-            vec![],
-        );
+        let old_table2 = create_test_table("posts", vec![("id", "BIGSERIAL PRIMARY KEY")], vec![]);
         old_state.add_table(old_table1);
         old_state.add_table(old_table2);
 
@@ -457,11 +440,8 @@ mod tests {
             ],
             vec![("idx_email", "CREATE INDEX idx_email ON users(email)")],
         );
-        let new_table3 = create_test_table(
-            "comments",
-            vec![("id", "BIGSERIAL PRIMARY KEY")],
-            vec![],
-        );
+        let new_table3 =
+            create_test_table("comments", vec![("id", "BIGSERIAL PRIMARY KEY")], vec![]);
         new_state.add_table(new_table1);
         new_state.add_table(new_table3);
 
@@ -487,11 +467,7 @@ mod tests {
         let old_state = SchemaState::new();
 
         let mut new_state = SchemaState::new();
-        let table = create_test_table(
-            "users",
-            vec![("id", "BIGSERIAL PRIMARY KEY")],
-            vec![],
-        );
+        let table = create_test_table("users", vec![("id", "BIGSERIAL PRIMARY KEY")], vec![]);
         new_state.add_table(table);
 
         let diff = SchemaDiff::compute(&old_state, &new_state);

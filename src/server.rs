@@ -4,21 +4,21 @@ use crate::constants;
 use crate::ir::Ir;
 use anyhow::{Context, Result};
 use axum::{
+    Json, Router,
     extract::{Path as AxumPath, Query},
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::get,
-    Json, Router,
 };
 use serde::Deserialize;
-use serde_json::{json, Value as JsonValue};
+use serde_json::{Value as JsonValue, json};
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{PgPool, Row};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
-use utoipa::openapi::*;
 use utoipa::openapi::path::*;
+use utoipa::openapi::*;
 use utoipa_swagger_ui::SwaggerUi;
 
 /// Shared application state
@@ -90,8 +90,7 @@ pub async fn serve(config: &Config, address: &str, port: u16) -> Result<()> {
     tracing::info!("Connected to database");
 
     // Load all endpoint IRs
-    let endpoints = Ir::load_all_ir_endpoints()
-        .context("Failed to load endpoint IRs")?;
+    let endpoints = Ir::load_all_ir_endpoints().context("Failed to load endpoint IRs")?;
 
     if endpoints.is_empty() {
         tracing::warn!("No endpoint IRs found. Did you run 'gen-endpoint' first?");
@@ -117,11 +116,13 @@ pub async fn serve(config: &Config, address: &str, port: u16) -> Result<()> {
         .context("Failed to bind to address")?;
 
     tracing::info!("API server listening on http://{}:{}", address, port);
-    tracing::info!("Swagger UI available at http://{}:{}/swagger-ui", address, port);
+    tracing::info!(
+        "Swagger UI available at http://{}:{}/swagger-ui",
+        address,
+        port
+    );
 
-    axum::serve(listener, app)
-        .await
-        .context("Server error")?;
+    axum::serve(listener, app).await.context("Server error")?;
 
     Ok(())
 }
@@ -142,15 +143,11 @@ async fn build_router(state: AppState) -> Result<Router> {
         let handler_state = state.clone();
 
         // Create handler for this endpoint
-        let handler = move |
-            path: AxumPath<HashMap<String, String>>,
-            query: Query<GenericQueryParams>
-        | {
+        let handler = move |path: AxumPath<HashMap<String, String>>,
+                            query: Query<GenericQueryParams>| {
             let endpoint_ir = endpoint_ir_clone.clone();
             let state = handler_state.clone();
-            async move {
-                handle_dynamic_endpoint(state, endpoint_ir, path, query).await
-            }
+            async move { handle_dynamic_endpoint(state, endpoint_ir, path, query).await }
         };
 
         // Register route based on method
@@ -160,8 +157,11 @@ async fn build_router(state: AppState) -> Result<Router> {
                 tracing::debug!("Registered GET {}", endpoint_ir.endpoint_path);
             }
             _ => {
-                tracing::warn!("Unsupported method {} for endpoint {}",
-                    endpoint_ir.method, endpoint_ir.endpoint_path);
+                tracing::warn!(
+                    "Unsupported method {} for endpoint {}",
+                    endpoint_ir.method,
+                    endpoint_ir.endpoint_path
+                );
             }
         }
     }
@@ -178,7 +178,8 @@ async fn build_router(state: AppState) -> Result<Router> {
     let openapi_spec = generate_openapi_spec(&state.endpoints);
 
     // Add Swagger UI with dynamic spec
-    router = router.merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", openapi_spec));
+    router =
+        router.merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", openapi_spec));
 
     Ok(router)
 }
@@ -189,9 +190,11 @@ fn generate_openapi_spec(endpoints: &[EndpointIrResult]) -> utoipa::openapi::Ope
         .info(
             InfoBuilder::new()
                 .title("Smorty Indexer API")
-                .description(Some("Smart Ethereum Event Indexer API - Dynamically generated endpoints from IR"))
+                .description(Some(
+                    "Smart Ethereum Event Indexer API - Dynamically generated endpoints from IR",
+                ))
                 .version("0.1.0")
-                .build()
+                .build(),
         )
         .build();
 
@@ -220,21 +223,21 @@ fn generate_path_item(endpoint_ir: &EndpointIrResult) -> PathItem {
                     "application/json",
                     ContentBuilder::new()
                         .schema(Some(generate_response_schema(endpoint_ir)))
-                        .build()
+                        .build(),
                 )
-                .build()
+                .build(),
         )
         .response(
             "400",
             ResponseBuilder::new()
                 .description("Bad request - invalid parameters")
-                .build()
+                .build(),
         )
         .response(
             "500",
             ResponseBuilder::new()
                 .description("Internal server error")
-                .build()
+                .build(),
         );
 
     // Add path parameters
@@ -246,7 +249,7 @@ fn generate_path_item(endpoint_ir: &EndpointIrResult) -> PathItem {
                 .description(Some(&path_param.description))
                 .required(Required::True)
                 .schema(Some(generate_param_schema(&path_param.param_type)))
-                .build()
+                .build(),
         );
     }
 
@@ -257,9 +260,13 @@ fn generate_path_item(endpoint_ir: &EndpointIrResult) -> PathItem {
             ParameterBuilder::new()
                 .name(&query_param.name)
                 .parameter_in(ParameterIn::Query)
-                .required(if is_required { Required::True } else { Required::False })
+                .required(if is_required {
+                    Required::True
+                } else {
+                    Required::False
+                })
                 .schema(Some(generate_param_schema(&query_param.param_type)))
-                .build()
+                .build(),
         );
     }
 
@@ -285,7 +292,7 @@ fn generate_response_schema(endpoint_ir: &EndpointIrResult) -> RefOr<Schema> {
     for field in &endpoint_ir.response_schema.fields {
         data_schema = data_schema.property(
             &field.name,
-            generate_field_schema(&field.field_type, &field.description)
+            generate_field_schema(&field.field_type, &field.description),
         );
     }
 
@@ -293,16 +300,14 @@ fn generate_response_schema(endpoint_ir: &EndpointIrResult) -> RefOr<Schema> {
     let wrapper = ObjectBuilder::new()
         .property(
             "data",
-            ArrayBuilder::new()
-                .items(data_schema.build())
-                .build()
+            ArrayBuilder::new().items(data_schema.build()).build(),
         )
         .property(
             "count",
             ObjectBuilder::new()
                 .schema_type(Type::Integer)
                 .description(Some("Number of items returned"))
-                .build()
+                .build(),
         )
         .build();
 
@@ -328,15 +333,9 @@ fn generate_param_schema(param_type: &str) -> RefOr<Schema> {
             .format(Some(SchemaFormat::KnownFormat(KnownFormat::Int64)))
             .minimum(Some(0.0))
             .build(),
-        "String" => ObjectBuilder::new()
-            .schema_type(Type::String)
-            .build(),
-        "bool" => ObjectBuilder::new()
-            .schema_type(Type::Boolean)
-            .build(),
-        _ => ObjectBuilder::new()
-            .schema_type(Type::String)
-            .build(),
+        "String" => ObjectBuilder::new().schema_type(Type::String).build(),
+        "bool" => ObjectBuilder::new().schema_type(Type::Boolean).build(),
+        _ => ObjectBuilder::new().schema_type(Type::String).build(),
     };
 
     RefOr::T(Schema::Object(schema))
@@ -375,7 +374,11 @@ fn generate_field_schema(field_type: &str, description: &str) -> RefOr<Schema> {
 
 /// Root endpoint with ASCII art
 async fn root_handler() -> impl IntoResponse {
-    let response = format!("{}\n\n{}", constants::SMORTY_ASCII, constants::SMORTY_DESCRIPTION);
+    let response = format!(
+        "{}\n\n{}",
+        constants::SMORTY_ASCII,
+        constants::SMORTY_DESCRIPTION
+    );
     (StatusCode::OK, response)
 }
 
@@ -399,11 +402,7 @@ async fn handle_dynamic_endpoint(
     tracing::debug!("Query params: {:?}", query_params.params);
 
     // Build SQL query with parameters
-    let (sql, sql_params) = build_sql_query(
-        &endpoint_ir,
-        &path_params.0,
-        &query_params.params,
-    )?;
+    let (sql, sql_params) = build_sql_query(&endpoint_ir, &path_params.0, &query_params.params)?;
 
     tracing::debug!("Executing SQL: {}", sql);
     tracing::debug!("SQL params: {:?}", sql_params);
@@ -451,10 +450,9 @@ fn build_sql_query(
 
     // First, extract path parameters in the order they appear in the IR
     for path_param in &endpoint_ir.path_params {
-        let value = path_params.get(&path_param.name)
-            .ok_or_else(|| ApiError::BadRequest(
-                format!("Missing path parameter: {}", path_param.name)
-            ))?;
+        let value = path_params.get(&path_param.name).ok_or_else(|| {
+            ApiError::BadRequest(format!("Missing path parameter: {}", path_param.name))
+        })?;
 
         // Validate and convert path parameter based on type
         validate_parameter_value(&path_param.name, value, &path_param.param_type)?;
@@ -471,7 +469,8 @@ fn build_sql_query(
 
             // Special validation for limit to prevent resource exhaustion
             if query_param.name == "limit" {
-                let limit: u32 = v.parse()
+                let limit: u32 = v
+                    .parse()
                     .map_err(|_| ApiError::BadRequest("Invalid limit parameter".to_string()))?;
 
                 if limit > 200 {
@@ -496,8 +495,9 @@ fn build_sql_query(
 
                 // Special handling for limit default
                 if query_param.name == "limit" {
-                    let limit: u32 = default_str.parse()
-                        .map_err(|_| ApiError::Internal("Invalid default limit in IR".to_string()))?;
+                    let limit: u32 = default_str.parse().map_err(|_| {
+                        ApiError::Internal("Invalid default limit in IR".to_string())
+                    })?;
                     SqlParam::U64(limit as u64)
                 } else {
                     convert_to_sql_param(&default_str, &query_param.param_type)?
@@ -505,9 +505,10 @@ fn build_sql_query(
             }
         } else {
             // Required parameter missing
-            return Err(ApiError::BadRequest(
-                format!("Missing required query parameter: {}", query_param.name)
-            ));
+            return Err(ApiError::BadRequest(format!(
+                "Missing required query parameter: {}",
+                query_param.name
+            )));
         };
 
         sql_params.push(sql_param);
@@ -532,29 +533,24 @@ fn convert_to_sql_param(value: &str, param_type: &str) -> Result<SqlParam, ApiEr
 
     match base_type {
         "u32" | "u64" => {
-            let num = value.parse::<u64>()
-                .map_err(|_| ApiError::BadRequest(
-                    format!("Parameter must be a positive integer: {}", value)
-                ))?;
+            let num = value.parse::<u64>().map_err(|_| {
+                ApiError::BadRequest(format!("Parameter must be a positive integer: {}", value))
+            })?;
             Ok(SqlParam::U64(num))
         }
         "i32" | "i64" => {
-            let num = value.parse::<i64>()
-                .map_err(|_| ApiError::BadRequest(
-                    format!("Parameter must be an integer: {}", value)
-                ))?;
+            let num = value.parse::<i64>().map_err(|_| {
+                ApiError::BadRequest(format!("Parameter must be an integer: {}", value))
+            })?;
             Ok(SqlParam::I64(num))
         }
         "bool" => {
-            let b = value.parse::<bool>()
-                .map_err(|_| ApiError::BadRequest(
-                    format!("Parameter must be true or false: {}", value)
-                ))?;
+            let b = value.parse::<bool>().map_err(|_| {
+                ApiError::BadRequest(format!("Parameter must be true or false: {}", value))
+            })?;
             Ok(SqlParam::Bool(b))
         }
-        "String" => {
-            Ok(SqlParam::String(value.to_string()))
-        }
+        "String" => Ok(SqlParam::String(value.to_string())),
         _ => {
             // Default to string for unknown types
             Ok(SqlParam::String(value.to_string()))
@@ -575,47 +571,47 @@ fn validate_parameter_value(name: &str, value: &str, param_type: &str) -> Result
 
     match base_type {
         "u32" | "u64" => {
-            value.parse::<u64>()
-                .map_err(|_| ApiError::BadRequest(
-                    format!("Parameter '{}' must be a positive integer", name)
-                ))?;
+            value.parse::<u64>().map_err(|_| {
+                ApiError::BadRequest(format!("Parameter '{}' must be a positive integer", name))
+            })?;
         }
         "i32" | "i64" => {
-            value.parse::<i64>()
-                .map_err(|_| ApiError::BadRequest(
-                    format!("Parameter '{}' must be an integer", name)
-                ))?;
+            value.parse::<i64>().map_err(|_| {
+                ApiError::BadRequest(format!("Parameter '{}' must be an integer", name))
+            })?;
         }
         "String" => {
             // Check for reasonable string length to prevent DoS
             if value.len() > 1000 {
-                return Err(ApiError::BadRequest(
-                    format!("Parameter '{}' exceeds maximum length", name)
-                ));
+                return Err(ApiError::BadRequest(format!(
+                    "Parameter '{}' exceeds maximum length",
+                    name
+                )));
             }
 
             // If it looks like an Ethereum address, validate format
             if value.starts_with("0x") && value.len() == 42 {
                 // Validate hex format
                 if !value[2..].chars().all(|c| c.is_ascii_hexdigit()) {
-                    return Err(ApiError::BadRequest(
-                        format!("Parameter '{}' is not a valid Ethereum address", name)
-                    ));
+                    return Err(ApiError::BadRequest(format!(
+                        "Parameter '{}' is not a valid Ethereum address",
+                        name
+                    )));
                 }
             }
         }
         "bool" => {
-            value.parse::<bool>()
-                .map_err(|_| ApiError::BadRequest(
-                    format!("Parameter '{}' must be true or false", name)
-                ))?;
+            value.parse::<bool>().map_err(|_| {
+                ApiError::BadRequest(format!("Parameter '{}' must be true or false", name))
+            })?;
         }
         _ => {
             // Unknown type, perform basic validation
             if value.len() > 1000 {
-                return Err(ApiError::BadRequest(
-                    format!("Parameter '{}' exceeds maximum length", name)
-                ));
+                return Err(ApiError::BadRequest(format!(
+                    "Parameter '{}' exceeds maximum length",
+                    name
+                )));
             }
         }
     }
@@ -693,21 +689,19 @@ fn rows_to_json(
                     // Handle optional types
                     let inner_type = t.trim_start_matches("Option<").trim_end_matches('>');
                     match inner_type {
-                        "i64" | "i32" => {
-                            row.try_get::<Option<i64>, _>(field.name.as_str())
-                                .ok()
-                                .flatten()
-                                .map(|v| json!(v))
-                                .unwrap_or(JsonValue::Null)
-                        }
-                        "String" => {
-                            row.try_get::<Option<String>, _>(field.name.as_str())
-                                .ok()
-                                .flatten()
-                                .map(|v| json!(v))
-                                .unwrap_or(JsonValue::Null)
-                        }
-                        _ => JsonValue::Null
+                        "i64" | "i32" => row
+                            .try_get::<Option<i64>, _>(field.name.as_str())
+                            .ok()
+                            .flatten()
+                            .map(|v| json!(v))
+                            .unwrap_or(JsonValue::Null),
+                        "String" => row
+                            .try_get::<Option<String>, _>(field.name.as_str())
+                            .ok()
+                            .flatten()
+                            .map(|v| json!(v))
+                            .unwrap_or(JsonValue::Null),
+                        _ => JsonValue::Null,
                     }
                 }
                 _ => {
@@ -929,7 +923,7 @@ mod tests {
             _ => panic!("Expected U64 param for limit"),
         }
         match &params[2] {
-            SqlParam::Null => {}, // Default startBlockTimestamp is null
+            SqlParam::Null => {} // Default startBlockTimestamp is null
             _ => panic!("Expected Null param for startBlockTimestamp"),
         }
     }
@@ -1110,7 +1104,10 @@ mod tests {
         let mut query_params = HashMap::new();
         query_params.insert("limit".to_string(), "10".to_string());
         query_params.insert("startBlockTimestamp".to_string(), "1234567".to_string());
-        query_params.insert("malicious_param".to_string(), "'; DROP TABLE users; --".to_string());
+        query_params.insert(
+            "malicious_param".to_string(),
+            "'; DROP TABLE users; --".to_string(),
+        );
 
         let result = build_sql_query(&endpoint_ir, &path_params, &query_params);
         assert!(result.is_ok());
@@ -1121,4 +1118,3 @@ mod tests {
         assert_eq!(params.len(), 3);
     }
 }
-

@@ -1,0 +1,36 @@
+{
+  "id": "chatcmpl-Cm3t9s8ZH6ga4IDTiNBicinVSXCHR",
+  "object": "chat.completion",
+  "created": 1765570727,
+  "model": "gpt-4o-2024-08-06",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"chain\":\"mainnet\",\"contract_address\":\"0x0000000000000000000000000000000000000001\",\"description\":\"Tracks when new Uniswap V3 pools are created by indexing the PoolCreated event.\",\"event_name\":\"PoolCreated\",\"event_signature\":\"PoolCreated(address,address,uint24,int24,address)\",\"indexed_fields\":[{\"indexed\":true,\"name\":\"token0\",\"rust_type\":\"String\",\"solidity_type\":\"address\"},{\"indexed\":true,\"name\":\"token1\",\"rust_type\":\"String\",\"solidity_type\":\"address\"},{\"indexed\":true,\"name\":\"fee\",\"rust_type\":\"String\",\"solidity_type\":\"uint24\"},{\"indexed\":false,\"name\":\"tickSpacing\",\"rust_type\":\"String\",\"solidity_type\":\"int24\"},{\"indexed\":false,\"name\":\"pool\",\"rust_type\":\"String\",\"solidity_type\":\"address\"}],\"start_block\":0,\"table_schema\":{\"columns\":[{\"name\":\"id\",\"type\":\"BIGSERIAL PRIMARY KEY\"},{\"name\":\"block_number\",\"type\":\"BIGINT NOT NULL\"},{\"name\":\"block_timestamp\",\"type\":\"BIGINT NOT NULL\"},{\"name\":\"transaction_hash\",\"type\":\"VARCHAR(66) NOT NULL\"},{\"name\":\"log_index\",\"type\":\"INTEGER NOT NULL\"},{\"name\":\"token0\",\"type\":\"VARCHAR(42) NOT NULL\"},{\"name\":\"token1\",\"type\":\"VARCHAR(42) NOT NULL\"},{\"name\":\"fee\",\"type\":\"NUMERIC(78, 0) NOT NULL\"},{\"name\":\"tick_spacing\",\"type\":\"NUMERIC(39, 0) NOT NULL\"},{\"name\":\"pool\",\"type\":\"VARCHAR(42) NOT NULL\"}],\"indexes\":[\"CREATE INDEX idx_block_number ON {table_name}(block_number)\",\"CREATE INDEX idx_timestamp ON {table_name}(block_timestamp)\"],\"table_name\":\"uniswap_v3_pool_created\"}}",
+        "refusal": null,
+        "annotations": []
+      },
+      "logprobs": null,
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1943,
+    "completion_tokens": 359,
+    "total_tokens": 2302,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "audio_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "audio_tokens": 0,
+      "accepted_prediction_tokens": 0,
+      "rejected_prediction_tokens": 0
+    }
+  },
+  "service_tier": "default",
+  "system_fingerprint": "fp_83554c687e"
+}
