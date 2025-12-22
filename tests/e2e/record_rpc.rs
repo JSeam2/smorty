@@ -13,8 +13,7 @@ use std::path::Path;
 const WETH_ADDRESS: &str = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
 
 /// Transfer event signature hash: keccak256("Transfer(address,address,uint256)")
-const TRANSFER_TOPIC: &str =
-    "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+const TRANSFER_TOPIC: &str = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 
 /// Makes a JSON-RPC call and returns the response
 async fn rpc_call(rpc_url: &str, method: &str, params: Value) -> Result<Value> {
@@ -58,11 +57,7 @@ async fn record_block_number(rpc_url: &str) -> Result<u64> {
 }
 
 /// Records eth_getLogs for WETH Transfer events
-async fn record_weth_transfer_logs(
-    rpc_url: &str,
-    from_block: u64,
-    to_block: u64,
-) -> Result<()> {
+async fn record_weth_transfer_logs(rpc_url: &str, from_block: u64, to_block: u64) -> Result<()> {
     println!(
         "Recording eth_getLogs for WETH transfers (blocks {} to {})...",
         from_block, to_block
@@ -107,22 +102,17 @@ async fn record_weth_transfer_logs(
 }
 
 /// Records eth_getBlockByNumber for block timestamps
-async fn record_block_timestamps(
-    rpc_url: &str,
-    block_numbers: &[u64],
-) -> Result<()> {
-    println!("Recording block timestamps for {} blocks...", block_numbers.len());
+async fn record_block_timestamps(rpc_url: &str, block_numbers: &[u64]) -> Result<()> {
+    println!(
+        "Recording block timestamps for {} blocks...",
+        block_numbers.len()
+    );
 
     let mut blocks = Vec::new();
 
     for &block_num in block_numbers {
         let block_hex = format!("0x{:x}", block_num);
-        let response = rpc_call(
-            rpc_url,
-            "eth_getBlockByNumber",
-            json!([block_hex, false]),
-        )
-        .await?;
+        let response = rpc_call(rpc_url, "eth_getBlockByNumber", json!([block_hex, false])).await?;
 
         if let Some(result) = response.get("result") {
             blocks.push(json!({

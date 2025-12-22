@@ -13,8 +13,8 @@ use std::path::Path;
 use std::process::{Child, Command, Stdio};
 use std::time::Duration;
 use tempfile::TempDir;
-use testcontainers::runners::AsyncRunner;
 use testcontainers::ContainerAsync;
+use testcontainers::runners::AsyncRunner;
 use testcontainers_modules::postgres::Postgres;
 use wiremock::matchers::{body_partial_json, method};
 use wiremock::{Mock, MockServer, ResponseTemplate};
@@ -32,40 +32,30 @@ pub struct E2eTestServer {
 impl E2eTestServer {
     /// Start a full e2e test server with testcontainers Postgres and mocked RPC
     pub async fn start() -> Result<Self> {
-        // 1. Start Postgres container
         let container = Postgres::default()
             .start()
             .await
             .context("Failed to start Postgres container")?;
 
         let db_port = container.get_host_port_ipv4(5432).await?;
-        let db_url = format!("postgres://postgres:postgres@localhost:{}/postgres", db_port);
+        let db_url = format!(
+            "postgres://postgres:postgres@localhost:{}/postgres",
+            db_port
+        );
 
-        // 2. Start RPC mock server
         let rpc_mock = MockServer::start().await;
         Self::mount_rpc_cassettes(&rpc_mock).await?;
 
-        // 3. Create temp directory for config and IR files
         let temp_dir = TempDir::new()?;
-
-        // 4. Setup IR files
         Self::setup_ir_files(&temp_dir)?;
-
-        // 5. Generate test config
         let config_path = Self::create_test_config(&temp_dir, &db_url, &rpc_mock.uri())?;
-
-        // 6. Run migrations
         Self::run_migrations(&temp_dir, &config_path).await?;
-
-        // 7. Run indexer (one-time mode)
         Self::run_indexer(&temp_dir, &config_path).await?;
 
-        // 8. Find available port and start server
         let port = portpicker::pick_unused_port().expect("No ports available");
         let url = format!("http://127.0.0.1:{}", port);
 
-        let server_process =
-            Self::start_server(&temp_dir, &config_path, port)?;
+        let server_process = Self::start_server(&temp_dir, &config_path, port)?;
 
         let server = Self {
             url,
@@ -76,7 +66,6 @@ impl E2eTestServer {
             _temp_dir: temp_dir,
         };
 
-        // 9. Wait for server ready
         server.wait_for_ready(Duration::from_secs(60)).await?;
 
         Ok(server)
@@ -84,15 +73,17 @@ impl E2eTestServer {
 
     /// Mount RPC cassettes on the mock server
     async fn mount_rpc_cassettes(mock_server: &MockServer) -> Result<()> {
-        let fixtures_dir = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("tests/e2e/fixtures/cassettes/rpc");
+        let fixtures_dir =
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/e2e/fixtures/cassettes/rpc");
 
         // Mount eth_blockNumber
         let block_number_cassette = fs::read_to_string(fixtures_dir.join("eth_blockNumber.json"))?;
         let block_number_response: Value = serde_json::from_str(&block_number_cassette)?;
 
         Mock::given(method("POST"))
-            .and(body_partial_json(serde_json::json!({"method": "eth_blockNumber"})))
+            .and(body_partial_json(
+                serde_json::json!({"method": "eth_blockNumber"}),
+            ))
             .respond_with(ResponseTemplate::new(200).set_body_json(&block_number_response))
             .mount(mock_server)
             .await;
@@ -103,7 +94,9 @@ impl E2eTestServer {
         let logs_response = &logs_data["response"];
 
         Mock::given(method("POST"))
-            .and(body_partial_json(serde_json::json!({"method": "eth_getLogs"})))
+            .and(body_partial_json(
+                serde_json::json!({"method": "eth_getLogs"}),
+            ))
             .respond_with(ResponseTemplate::new(200).set_body_json(logs_response))
             .mount(mock_server)
             .await;
@@ -122,7 +115,9 @@ impl E2eTestServer {
                 });
 
                 Mock::given(method("POST"))
-                    .and(body_partial_json(serde_json::json!({"method": "eth_getBlockByNumber"})))
+                    .and(body_partial_json(
+                        serde_json::json!({"method": "eth_getBlockByNumber"}),
+                    ))
                     .respond_with(ResponseTemplate::new(200).set_body_json(&response))
                     .mount(mock_server)
                     .await;
@@ -132,41 +127,50 @@ impl E2eTestServer {
         Ok(())
     }
 
-    /// Setup IR files in temp directory
-    fn setup_ir_files(temp_dir: &TempDir) -> Result<()> {
+    /// Setup IR files in the project directory (smorty loads from project root)
+    fn setup_ir_files(_temp_dir: &TempDir) -> Result<()> {
         let fixtures_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/e2e/fixtures");
+        let project_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
 
-        // Create ir/specs/WETH directory
-        let spec_dir = temp_dir.path().join("ir/specs/WETH");
+        let spec_dir = project_dir.join("ir/specs/E2E_WETH");
         fs::create_dir_all(&spec_dir)?;
 
-        // Copy spec IR
         let spec_content = fs::read_to_string(fixtures_dir.join("weth_spec_ir.json"))?;
         fs::write(spec_dir.join("transfers.json"), spec_content)?;
 
-        // Create ir/endpoints directory
-        let endpoint_dir = temp_dir.path().join("ir/endpoints");
+        let endpoint_dir = project_dir.join("ir/endpoints");
         fs::create_dir_all(&endpoint_dir)?;
 
-        // Copy endpoint IR
-        let endpoint_content = fs::read_to_string(fixtures_dir.join("weth_transfers_endpoint.json"))?;
-        fs::write(endpoint_dir.join("weth_transfers.json"), endpoint_content)?;
+        let endpoint_content =
+            fs::read_to_string(fixtures_dir.join("weth_transfers_endpoint.json"))?;
+        fs::write(
+            endpoint_dir.join("e2e_weth_transfers.json"),
+            endpoint_content,
+        )?;
 
-        // Create migrations directory with schema
-        let migrations_dir = temp_dir.path().join("migrations");
-        fs::create_dir_all(&migrations_dir)?;
-
-        // Generate migration SQL from spec IR
-        let spec: Value = serde_json::from_str(&fs::read_to_string(fixtures_dir.join("weth_spec_ir.json"))?)?;
+        let migrations_dir = project_dir.join("migrations");
+        let spec: Value =
+            serde_json::from_str(&fs::read_to_string(fixtures_dir.join("weth_spec_ir.json"))?)?;
         let table_schema = &spec["table_schema"];
-        let table_name = table_schema["table_name"].as_str().unwrap_or("weth_transfers");
+        let table_name = table_schema["table_name"]
+            .as_str()
+            .unwrap_or("weth_transfers");
 
-        let mut sql = format!("-- E2E test migration\nCREATE TABLE IF NOT EXISTS {} (\n", table_name);
+        let mut sql = format!(
+            "-- E2E test migration\nCREATE TABLE IF NOT EXISTS {} (\n",
+            table_name
+        );
 
         if let Some(columns) = table_schema["columns"].as_array() {
             let col_defs: Vec<String> = columns
                 .iter()
-                .map(|c| format!("    {} {}", c["name"].as_str().unwrap(), c["type"].as_str().unwrap()))
+                .map(|c| {
+                    format!(
+                        "    {} {}",
+                        c["name"].as_str().unwrap(),
+                        c["type"].as_str().unwrap()
+                    )
+                })
                 .collect();
             sql.push_str(&col_defs.join(",\n"));
         }
@@ -176,7 +180,10 @@ impl E2eTestServer {
             for idx in indexes {
                 let idx_sql = idx.as_str().unwrap().replace("{table_name}", table_name);
                 // Add IF NOT EXISTS to index creation
-                let idx_sql = idx_sql.replace("CREATE INDEX", &format!("CREATE INDEX IF NOT EXISTS {}_{}", table_name, ""));
+                let idx_sql = idx_sql.replace(
+                    "CREATE INDEX",
+                    &format!("CREATE INDEX IF NOT EXISTS {}_{}", table_name, ""),
+                );
                 sql.push_str(&format!("{};\n", idx_sql));
             }
         }
@@ -192,7 +199,10 @@ impl E2eTestServer {
                 }
             }
         });
-        fs::write(migrations_dir.join("schema.json"), serde_json::to_string_pretty(&schema_state)?)?;
+        fs::write(
+            migrations_dir.join("schema.json"),
+            serde_json::to_string_pretty(&schema_state)?,
+        )?;
 
         Ok(())
     }
@@ -215,12 +225,12 @@ model = "gpt-4o"
 apiKey = "test-key-not-used"
 temperature = 0.7
 
-[contracts.WETH]
+[contracts.E2E_WETH]
 chain = "mainnet"
 address = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
 abiPath = "tests/integration/fixtures/abi/weth.json"
 
-[[contracts.WETH.specs]]
+[[contracts.E2E_WETH.specs]]
 name = "transfers"
 startBlock = 18500000
 task = "Track all WETH token transfers"
@@ -239,7 +249,7 @@ task = "Return recent WETH transfers"
     }
 
     /// Run migrations using sqlx
-    async fn run_migrations(temp_dir: &TempDir, config_path: &Path) -> Result<()> {
+    async fn run_migrations(_temp_dir: &TempDir, config_path: &Path) -> Result<()> {
         let output = Command::new("cargo")
             .args([
                 "run",
@@ -248,8 +258,7 @@ task = "Return recent WETH transfers"
                 config_path.to_str().unwrap(),
                 "migrate",
             ])
-            .current_dir(temp_dir.path())
-            .env("CARGO_MANIFEST_DIR", env!("CARGO_MANIFEST_DIR"))
+            .current_dir(env!("CARGO_MANIFEST_DIR"))
             .output()
             .context("Failed to run migrate command")?;
 
@@ -265,7 +274,7 @@ task = "Return recent WETH transfers"
     }
 
     /// Run indexer in one-time mode
-    async fn run_indexer(temp_dir: &TempDir, config_path: &Path) -> Result<()> {
+    async fn run_indexer(_temp_dir: &TempDir, config_path: &Path) -> Result<()> {
         let output = Command::new("cargo")
             .args([
                 "run",
@@ -274,8 +283,7 @@ task = "Return recent WETH transfers"
                 config_path.to_str().unwrap(),
                 "index",
             ])
-            .current_dir(temp_dir.path())
-            .env("CARGO_MANIFEST_DIR", env!("CARGO_MANIFEST_DIR"))
+            .current_dir(env!("CARGO_MANIFEST_DIR"))
             .output()
             .context("Failed to run index command")?;
 
@@ -291,11 +299,7 @@ task = "Return recent WETH transfers"
     }
 
     /// Start the server process
-    fn start_server(
-        temp_dir: &TempDir,
-        config_path: &Path,
-        port: u16,
-    ) -> Result<Child> {
+    fn start_server(_temp_dir: &TempDir, config_path: &Path, port: u16) -> Result<Child> {
         let child = Command::new("cargo")
             .args([
                 "run",
@@ -308,8 +312,7 @@ task = "Return recent WETH transfers"
                 "--port",
                 &port.to_string(),
             ])
-            .current_dir(temp_dir.path())
-            .env("CARGO_MANIFEST_DIR", env!("CARGO_MANIFEST_DIR"))
+            .current_dir(env!("CARGO_MANIFEST_DIR"))
             .env("RUST_LOG", "info")
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -348,6 +351,11 @@ impl Drop for E2eTestServer {
             let _ = child.kill();
             let _ = child.wait();
         }
+
+        // Clean up test IR files from project directory
+        let project_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let _ = fs::remove_dir_all(project_dir.join("ir/specs/E2E_WETH"));
+        let _ = fs::remove_file(project_dir.join("ir/endpoints/e2e_weth_transfers.json"));
     }
 }
 
@@ -402,7 +410,10 @@ async fn test_e2e_openapi_spec() -> Result<()> {
     let server = E2eTestServer::start().await?;
 
     let client = Client::new();
-    let resp = client.get(server.url("/api-docs/openapi.json")).send().await?;
+    let resp = client
+        .get(server.url("/api-docs/openapi.json"))
+        .send()
+        .await?;
 
     assert_eq!(resp.status(), 200);
 
@@ -414,7 +425,10 @@ async fn test_e2e_openapi_spec() -> Result<()> {
         "Response should be OpenAPI spec"
     );
     assert!(spec.get("info").is_some(), "Spec should have info section");
-    assert!(spec.get("paths").is_some(), "Spec should have paths section");
+    assert!(
+        spec.get("paths").is_some(),
+        "Spec should have paths section"
+    );
 
     Ok(())
 }
@@ -425,10 +439,7 @@ async fn test_e2e_weth_transfers_endpoint() -> Result<()> {
     let server = E2eTestServer::start().await?;
 
     let client = Client::new();
-    let resp = client
-        .get(server.url("/api/weth/transfers"))
-        .send()
-        .await?;
+    let resp = client.get(server.url("/api/weth/transfers")).send().await?;
 
     // Should return 200 even if no data
     assert_eq!(resp.status(), 200);
@@ -436,7 +447,10 @@ async fn test_e2e_weth_transfers_endpoint() -> Result<()> {
     let body: Value = resp.json().await?;
 
     // Response should have expected structure
-    assert!(body.get("data").is_some() || body.is_array(), "Should return data");
+    assert!(
+        body.get("data").is_some() || body.is_array(),
+        "Should return data"
+    );
 
     Ok(())
 }
