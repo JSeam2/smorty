@@ -57,11 +57,16 @@ dotenv = "0.15"
 chrono = { version = "0.4", features = ["serde"] }
 hex = "0.4"
 
+[features]
+default = []
+e2e = []
+
 [dev-dependencies]
 tempfile = "3.15"
 wiremock = "0.6"
 serial_test = "3.2"
 reqwest = { version = "0.12", features = ["json"] }
-# testcontainers for PR #3+ (requires Docker)
-# testcontainers = "0.23"
-# testcontainers-modules = { version = "0.11", features = ["postgres"] }
+anyhow = "1.0"
+portpicker = "0.1"
+testcontainers = "0.23"
+testcontainers-modules = { version = "0.11", features = ["postgres"] }

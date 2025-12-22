@@ -1,0 +1,47 @@
+{
+  "chain": "mainnet",
+  "contract_address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+  "description": "Track all WETH token transfers",
+  "event_name": "Transfer",
+  "event_signature": "Transfer(address,address,uint256)",
+  "indexed_fields": [
+    {
+      "indexed": true,
+      "name": "src",
+      "rust_type": "String",
+      "solidity_type": "address"
+    },
+    {
+      "indexed": true,
+      "name": "dst",
+      "rust_type": "String",
+      "solidity_type": "address"
+    },
+    {
+      "indexed": false,
+      "name": "wad",
+      "rust_type": "String",
+      "solidity_type": "uint256"
+    }
+  ],
+  "start_block": 18500000,
+  "table_schema": {
+    "columns": [
+      {"name": "id", "type": "BIGSERIAL PRIMARY KEY"},
+      {"name": "block_number", "type": "BIGINT NOT NULL"},
+      {"name": "block_timestamp", "type": "BIGINT NOT NULL"},
+      {"name": "transaction_hash", "type": "VARCHAR(66) NOT NULL"},
+      {"name": "log_index", "type": "INTEGER NOT NULL"},
+      {"name": "src", "type": "VARCHAR(42) NOT NULL"},
+      {"name": "dst", "type": "VARCHAR(42) NOT NULL"},
+      {"name": "wad", "type": "NUMERIC(78, 0) NOT NULL"}
+    ],
+    "indexes": [
+      "CREATE INDEX idx_block_number ON {table_name}(block_number)",
+      "CREATE INDEX idx_timestamp ON {table_name}(block_timestamp)",
+      "CREATE INDEX idx_src ON {table_name}(src)",
+      "CREATE INDEX idx_dst ON {table_name}(dst)"
+    ],
+    "table_name": "weth_transfers"
+  }
+}

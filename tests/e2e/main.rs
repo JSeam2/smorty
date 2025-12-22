@@ -1,9 +1,18 @@
 //! End-to-end tests for the smorty server
 //!
-//! PR #2: Basic health/swagger tests (no Docker required)
-//! PR #3+: Full flow tests with testcontainers (Docker required)
+//! Lightweight tests (no Docker required):
+//!   cargo test --test e2e
+//!
+//! Full e2e tests with testcontainers (Docker required):
+//!   cargo test --features e2e -- --test-threads=1
 
 pub mod health_test;
+
+#[cfg(feature = "e2e")]
+pub mod full_flow_test;
+
+#[cfg(feature = "e2e")]
+pub mod record_rpc;
 
 use std::net::TcpListener;
 use tokio::task::JoinHandle;

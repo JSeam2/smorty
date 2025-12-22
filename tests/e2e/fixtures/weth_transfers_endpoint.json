@@ -1,0 +1,32 @@
+{
+  "description": "Get recent WETH transfers with optional address filtering and pagination support",
+  "endpoint_path": "/api/weth/transfers",
+  "method": "GET",
+  "path_params": [],
+  "query_params": [
+    {
+      "default": "null",
+      "name": "address",
+      "type": "Option<String>"
+    },
+    {
+      "default": 50,
+      "name": "limit",
+      "type": "u32"
+    }
+  ],
+  "response_schema": {
+    "fields": [
+      {"description": "Block number where the transfer occurred", "name": "block_number", "type": "i64"},
+      {"description": "Unix timestamp of the block", "name": "block_timestamp", "type": "i64"},
+      {"description": "Transaction hash of the transfer", "name": "transaction_hash", "type": "String"},
+      {"description": "Log index within the block", "name": "log_index", "type": "i32"},
+      {"description": "Source address of the transfer", "name": "src", "type": "String"},
+      {"description": "Destination address of the transfer", "name": "dst", "type": "String"},
+      {"description": "Amount of WETH transferred", "name": "wad", "type": "String"}
+    ],
+    "name": "WethTransferResponse"
+  },
+  "sql_query": "SELECT block_number, block_timestamp, transaction_hash, log_index, src, dst, wad FROM weth_transfers WHERE ($1::VARCHAR IS NULL OR src = $1 OR dst = $1) ORDER BY block_timestamp DESC LIMIT $2",
+  "tables_referenced": ["weth_transfers"]
+}
