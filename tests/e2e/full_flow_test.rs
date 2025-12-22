@@ -5,6 +5,7 @@
 #![cfg(feature = "e2e")]
 
 use anyhow::{Context, Result};
+use chrono::Utc;
 use reqwest::Client;
 use serde_json::Value;
 use serial_test::serial;
@@ -176,28 +177,67 @@ impl E2eTestServer {
         }
         sql.push_str("\n);\n\n");
 
+        // Build indexes with proper naming
+        let mut index_definitions = Vec::new();
         if let Some(indexes) = table_schema["indexes"].as_array() {
             for idx in indexes {
-                let idx_sql = idx.as_str().unwrap().replace("{table_name}", table_name);
-                // Add IF NOT EXISTS to index creation
-                let idx_sql = idx_sql.replace(
-                    "CREATE INDEX",
-                    &format!("CREATE INDEX IF NOT EXISTS {}_{}", table_name, ""),
+                let idx_template = idx.as_str().unwrap();
+                // Extract index name from template (e.g., "idx_block_number" from "CREATE INDEX idx_block_number ON ...")
+                let idx_name_start = idx_template.find("idx_").unwrap_or(13);
+                let idx_name_end = idx_template.find(" ON").unwrap_or(idx_template.len());
+                let base_idx_name = &idx_template[idx_name_start..idx_name_end];
+                let full_idx_name = format!("{}_{}", table_name, base_idx_name);
+
+                // Extract columns part (everything from opening paren onwards)
+                let columns_start = idx_template.find('(').unwrap_or(idx_template.len());
+                let columns_part = &idx_template[columns_start..];
+
+                // Build the full CREATE INDEX statement
+                let idx_sql = format!(
+                    "CREATE INDEX IF NOT EXISTS {} ON {}{}",
+                    full_idx_name, table_name, columns_part
                 );
                 sql.push_str(&format!("{};\n", idx_sql));
+
+                // Store for schema.json (without IF NOT EXISTS)
+                index_definitions.push(serde_json::json!({
+                    "name": full_idx_name,
+                    "definition": format!(
+                        "CREATE INDEX {} ON {}{}",
+                        full_idx_name, table_name, columns_part
+                    )
+                }));
             }
         }
 
         fs::write(migrations_dir.join("0001_initial.sql"), sql)?;
 
-        // Create schema.json for the indexer
+        // Create schema.json for the indexer - transform columns to use column_type
+        let columns: Vec<Value> = table_schema["columns"]
+            .as_array()
+            .unwrap_or(&vec![])
+            .iter()
+            .map(|c| {
+                serde_json::json!({
+                    "name": c["name"],
+                    "column_type": c["type"]
+                })
+            })
+            .collect();
+
         let schema_state = serde_json::json!({
             "tables": {
                 table_name: {
-                    "columns": table_schema["columns"],
-                    "indexes": table_schema["indexes"]
+                    "name": table_name,
+                    "source": {
+                        "contract_name": "E2E_WETH",
+                        "spec_name": "transfers"
+                    },
+                    "columns": columns,
+                    "indexes": index_definitions
                 }
-            }
+            },
+            "timestamp": Utc::now().to_rfc3339()
         });
         fs::write(
             migrations_dir.join("schema.json"),
