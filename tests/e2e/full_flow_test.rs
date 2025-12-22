@@ -133,6 +133,10 @@ impl E2eTestServer {
         let fixtures_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/e2e/fixtures");
         let project_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
 
+        // Clean up any stale test files from previous runs
+        let _ = fs::remove_file(project_dir.join("migrations/0001_initial.sql"));
+        let _ = fs::remove_file(project_dir.join("migrations/schema.json.e2e_backup"));
+
         let spec_dir = project_dir.join("ir/specs/E2E_WETH");
         fs::create_dir_all(&spec_dir)?;
 
@@ -211,6 +215,13 @@ impl E2eTestServer {
         }
 
         fs::write(migrations_dir.join("0001_initial.sql"), sql)?;
+
+        // Backup existing schema.json before overwriting
+        let schema_file = migrations_dir.join("schema.json");
+        let schema_backup = migrations_dir.join("schema.json.e2e_backup");
+        if schema_file.exists() {
+            fs::copy(&schema_file, &schema_backup)?;
+        }
 
         // Create schema.json for the indexer - transform columns to use column_type
         let columns: Vec<Value> = table_schema["columns"]
@@ -392,10 +403,20 @@ impl Drop for E2eTestServer {
             let _ = child.wait();
         }
 
-        // Clean up test IR files from project directory
+        // Clean up test files from project directory
         let project_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
         let _ = fs::remove_dir_all(project_dir.join("ir/specs/E2E_WETH"));
         let _ = fs::remove_file(project_dir.join("ir/endpoints/e2e_weth_transfers.json"));
+
+        // Clean up test migration file
+        let _ = fs::remove_file(project_dir.join("migrations/0001_initial.sql"));
+
+        // Restore original schema.json from backup if exists
+        let schema_backup = project_dir.join("migrations/schema.json.e2e_backup");
+        let schema_file = project_dir.join("migrations/schema.json");
+        if schema_backup.exists() {
+            let _ = fs::rename(&schema_backup, &schema_file);
+        }
     }
 }
 
