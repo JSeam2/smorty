@@ -27,6 +27,6 @@
     ],
     "name": "WethTransferResponse"
   },
-  "sql_query": "SELECT block_number, block_timestamp, transaction_hash, log_index, src, dst, wad FROM weth_transfers WHERE ($1::VARCHAR IS NULL OR src = $1 OR dst = $1) ORDER BY block_timestamp DESC LIMIT $2",
+  "sql_query": "SELECT block_number, block_timestamp, transaction_hash, log_index, src, dst, wad FROM weth_transfers WHERE ($1::TEXT IS NULL OR src = $1::TEXT OR dst = $1::TEXT) ORDER BY block_timestamp DESC LIMIT $2",
   "tables_referenced": ["weth_transfers"]
 }

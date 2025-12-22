@@ -134,7 +134,8 @@ impl E2eTestServer {
         let project_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
 
         // Clean up any stale test files from previous runs
-        let _ = fs::remove_file(project_dir.join("migrations/0001_initial.sql"));
+        let _ = fs::remove_file(project_dir.join("migrations/0001_initial.sql")); // old format
+        let _ = fs::remove_file(project_dir.join("migrations/20240101000000_e2e_weth.sql"));
         let _ = fs::remove_file(project_dir.join("migrations/schema.json.e2e_backup"));
 
         let spec_dir = project_dir.join("ir/specs/E2E_WETH");
@@ -214,7 +215,8 @@ impl E2eTestServer {
             }
         }
 
-        fs::write(migrations_dir.join("0001_initial.sql"), sql)?;
+        // Use timestamp format that SQLx expects, earlier than existing migrations
+        fs::write(migrations_dir.join("20240101000000_e2e_weth.sql"), sql)?;
 
         // Backup existing schema.json before overwriting
         let schema_file = migrations_dir.join("schema.json");
@@ -408,8 +410,9 @@ impl Drop for E2eTestServer {
         let _ = fs::remove_dir_all(project_dir.join("ir/specs/E2E_WETH"));
         let _ = fs::remove_file(project_dir.join("ir/endpoints/e2e_weth_transfers.json"));
 
-        // Clean up test migration file
-        let _ = fs::remove_file(project_dir.join("migrations/0001_initial.sql"));
+        // Clean up test migration files
+        let _ = fs::remove_file(project_dir.join("migrations/0001_initial.sql")); // old format
+        let _ = fs::remove_file(project_dir.join("migrations/20240101000000_e2e_weth.sql"));
 
         // Restore original schema.json from backup if exists
         let schema_backup = project_dir.join("migrations/schema.json.e2e_backup");
